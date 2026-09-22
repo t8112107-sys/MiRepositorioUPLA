@@ -1,10 +1,12 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+
 <%
     request.setCharacterEncoding("UTF-8");
     response.setCharacterEncoding("UTF-8");
 %>
 
 <!DOCTYPE html>
+
 <html lang="es">
 
 <head>
@@ -18,27 +20,45 @@
 
     <meta
         name="description"
-        content="Repositorio académico de Ingeniería de Sistemas y Computación"
+        content="Repositorio académico personal de Ingeniería de Sistemas y Computación - UPLA"
+    >
+
+    <meta
+        name="theme-color"
+        content="#0d1916"
     >
 
     <title>
         Mi Repositorio Académico | UPLA
     </title>
 
-    <!--
-        El ?v=7 obliga al navegador a cargar
-        la versión nueva del CSS.
-    -->
+
+    <!-- ============================================== -->
+    <!-- ESTILOS -->
+    <!-- ============================================== -->
+
     <link
         rel="stylesheet"
-        href="<%= request.getContextPath() %>/css/styles.css?v=7"
+        href="<%= request.getContextPath() %>/css/styles.css?v=8"
     >
 
 </head>
 
 
 <body>
-<div class="tech-particles" id="techParticles"></div>
+
+
+    <!-- ============================================== -->
+    <!-- PARTÍCULAS / FONDO -->
+    <!-- ============================================== -->
+
+    <div
+        class="tech-particles"
+        id="techParticles"
+        aria-hidden="true"
+    ></div>
+
+
 
     <!-- ============================================== -->
     <!-- BARRA SUPERIOR -->
@@ -49,7 +69,7 @@
         <div class="wrap top-strip__inner">
 
             <span>
-                Repositorio Académico
+                Ingeniería de Sistemas y Computación
             </span>
 
 
@@ -86,7 +106,7 @@
 
 
     <!-- ============================================== -->
-    <!-- ENCABEZADO -->
+    <!-- HEADER -->
     <!-- ============================================== -->
 
     <header class="site-header">
@@ -94,9 +114,12 @@
         <div class="wrap site-header__inner">
 
 
+            <!-- MARCA -->
+
             <a
                 class="brand"
                 href="#inicio"
+                aria-label="Ir al inicio"
             >
 
                 <div class="brand-mark">
@@ -111,7 +134,7 @@
                     </strong>
 
                     <span>
-                        Universidad Peruana Los Andes
+                        Mi espacio académico
                     </span>
 
                 </div>
@@ -120,19 +143,25 @@
 
 
 
+            <!-- BOTÓN MÓVIL -->
+
             <button
                 class="menu-toggle"
                 id="menuToggle"
                 type="button"
+                aria-label="Abrir menú"
             >
                 Menú
             </button>
 
 
 
+            <!-- NAVEGACIÓN -->
+
             <nav
                 class="main-nav"
                 id="mainNav"
+                aria-label="Navegación principal"
             >
 
                 <a
@@ -147,7 +176,7 @@
                     href="#semanas"
                     data-route="semanas"
                 >
-                    Semanas
+                    Mi recorrido
                 </a>
 
 
@@ -184,7 +213,7 @@
 
 
     <!-- ============================================== -->
-    <!-- CONTENIDO -->
+    <!-- CONTENIDO DINÁMICO -->
     <!-- ============================================== -->
 
     <main id="app">
@@ -193,8 +222,12 @@
 
             <div class="wrap">
 
+                <span class="eyebrow">
+                    Repositorio UPLA
+                </span>
+
                 <p>
-                    Cargando repositorio...
+                    Preparando tu espacio académico...
                 </p>
 
             </div>
@@ -206,7 +239,7 @@
 
 
     <!-- ============================================== -->
-    <!-- PIE DE PÁGINA -->
+    <!-- FOOTER -->
     <!-- ============================================== -->
 
     <footer class="site-footer wrap">
@@ -225,8 +258,9 @@
 
 
         <p>
-            Repositorio académico desarrollado con JSP,
-            Tomcat y Supabase.
+            Un espacio personal para documentar,
+            organizar y presentar mi recorrido académico
+            durante las 16 semanas del ciclo.
         </p>
 
     </footer>
@@ -234,12 +268,15 @@
 
 
     <!-- ============================================== -->
-    <!-- MODAL DE INICIO DE SESIÓN -->
+    <!-- MODAL LOGIN -->
     <!-- ============================================== -->
 
     <div
         id="authModal"
         class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="loginTitle"
     >
 
         <div class="modal-card">
@@ -250,11 +287,11 @@
                 <div>
 
                     <span class="eyebrow">
-                        Acceso administrativo
+                        Área privada
                     </span>
 
-                    <h2>
-                        Iniciar sesión
+                    <h2 id="loginTitle">
+                        Bienvenido
                     </h2>
 
                 </div>
@@ -272,6 +309,20 @@
 
 
 
+            <p
+                style="
+                    color:var(--muted);
+                    line-height:1.6;
+                    font-size:13px;
+                    margin-top:12px;
+                "
+            >
+                Inicia sesión para administrar tu perfil
+                y los materiales del repositorio.
+            </p>
+
+
+
             <form
                 id="loginForm"
                 class="form-stack"
@@ -285,6 +336,7 @@
                         id="loginEmail"
                         type="email"
                         required
+                        autocomplete="email"
                         placeholder="correo@ejemplo.com"
                     >
 
@@ -299,6 +351,7 @@
                         id="loginPassword"
                         type="password"
                         required
+                        autocomplete="current-password"
                         placeholder="Ingresa tu contraseña"
                     >
 
@@ -309,7 +362,7 @@
                     class="btn primary"
                     type="submit"
                 >
-                    Ingresar
+                    Entrar a mi espacio
                 </button>
 
             </form>
@@ -318,6 +371,7 @@
             <p
                 id="authMessage"
                 class="form-message"
+                aria-live="polite"
             ></p>
 
 
@@ -337,21 +391,25 @@
     ></script>
 
 
-    <!--
-        IMPORTANTE:
-        Cambiamos la versión para evitar que Chrome
-        utilice archivos antiguos guardados en caché.
-    -->
+
+    <!-- ============================================== -->
+    <!-- CONFIGURACIÓN -->
+    <!-- ============================================== -->
 
     <script
         charset="UTF-8"
-        src="<%= request.getContextPath() %>/js/config.js?v=7"
+        src="<%= request.getContextPath() %>/js/config.js?v=8"
     ></script>
 
 
+
+    <!-- ============================================== -->
+    <!-- APLICACIÓN -->
+    <!-- ============================================== -->
+
     <script
         charset="UTF-8"
-        src="<%= request.getContextPath() %>/js/app.js?v=7"
+        src="<%= request.getContextPath() %>/js/app.js?v=8"
     ></script>
 
 
