@@ -1,3204 +1,3477 @@
-/* =========================================================
-   MI REPOSITORIO UPLA
-   ACADEMIC JOURNEY UI
-   ========================================================= */
-
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+// =====================================================
+// MI REPOSITORIO UPLA
+// APP.JS COMPLETO
+// =====================================================
 
 
-/* =========================================================
-   VARIABLES
-   ========================================================= */
+// =====================================================
+// SUPABASE
+// =====================================================
 
-:root {
+const cfg = window.APP_CONFIG || {};
 
-    --bg: #f4f7f5;
-    --surface: #ffffff;
-    --surface-soft: #eef4f1;
+const configured =
+    cfg.SUPABASE_URL &&
+    cfg.SUPABASE_ANON_KEY &&
+    !cfg.SUPABASE_URL.includes("PEGA_AQUI") &&
+    !cfg.SUPABASE_ANON_KEY.includes("PEGA_AQUI");
 
-    --dark: #0d1916;
-    --dark-2: #13241f;
+const sb = configured
+    ? window.supabase.createClient(
+        cfg.SUPABASE_URL,
+        cfg.SUPABASE_ANON_KEY
+    )
+    : null;
 
-    --green: #1c5c4d;
-    --green-2: #277865;
-    --green-3: #3aa67f;
 
-    --mint: #9ce6c3;
-    --mint-light: #d9f8e9;
+// =====================================================
+// ELEMENTOS PRINCIPALES
+// =====================================================
 
-    --lime: #dff477;
-    --lime-soft: #f0f8bd;
+const app = document.getElementById("app");
+const nav = document.getElementById("mainNav");
+const menuToggle = document.getElementById("menuToggle");
 
-    --text: #17221e;
-    --text-2: #3c4b45;
-    --muted: #75827d;
+const authModal = document.getElementById("authModal");
+const loginTopBtn = document.getElementById("loginTopBtn");
+const logoutTopBtn = document.getElementById("logoutTopBtn");
 
-    --line: rgba(13, 25, 22, .10);
-    --line-light: rgba(255,255,255,.12);
+const userState = document.getElementById("userState");
+const closeAuth = document.getElementById("closeAuth");
+const loginForm = document.getElementById("loginForm");
+const authMessage = document.getElementById("authMessage");
 
-    --shadow-sm:
-        0 8px 25px rgba(20,40,32,.06);
+let session = null;
+let profile = null;
 
-    --shadow:
-        0 18px 50px rgba(20,40,32,.10);
 
-    --shadow-lg:
-        0 35px 80px rgba(20,40,32,.14);
+// =====================================================
+// SEMANAS
+// =====================================================
 
-    --radius-sm: 14px;
-    --radius: 22px;
-    --radius-lg: 34px;
+const weeks = Array.from(
+    { length: 16 },
+    (_, i) => ({
+        id: i + 1,
+        title: `Semana ${String(i + 1).padStart(2, "0")}`,
+        description:
+            `Material académico, actividades y archivos correspondientes a la semana ${i + 1}.`
+    })
+);
 
-    --ease:
-        cubic-bezier(.2,.8,.2,1);
+
+// =====================================================
+// ACTIVIDADES
+// =====================================================
+
+const activities = [
+    {
+        title: "Presentación del repositorio",
+        week: 1,
+        type: "Trabajo",
+        status: "done"
+    },
+    {
+        title: "Organización de materiales",
+        week: 2,
+        type: "Actividad",
+        status: "done"
+    },
+    {
+        title: "Desarrollo de contenido semanal",
+        week: 3,
+        type: "Práctica",
+        status: "done"
+    },
+    {
+        title: "Actualización del portafolio",
+        week: 4,
+        type: "Trabajo",
+        status: "pending"
+    }
+];
+
+
+// =====================================================
+// MENÚ
+// =====================================================
+
+if (menuToggle && nav) {
+
+    menuToggle.addEventListener(
+        "click",
+        () => {
+            nav.classList.toggle("open");
+        }
+    );
+
 }
 
 
-/* =========================================================
-   RESET
-   ========================================================= */
+// =====================================================
+// MODAL LOGIN
+// =====================================================
 
-* {
-    box-sizing: border-box;
-}
+if (loginTopBtn && authModal) {
 
-html {
-    scroll-behavior: smooth;
-}
+    loginTopBtn.addEventListener(
+        "click",
+        () => {
+            authModal.classList.add("open");
+        }
+    );
 
-body {
-
-    margin: 0;
-
-    font-family:
-        "DM Sans",
-        "Segoe UI",
-        Arial,
-        sans-serif;
-
-    color: var(--text);
-
-    background:
-        linear-gradient(
-            rgba(20,50,40,.035) 1px,
-            transparent 1px
-        ),
-        linear-gradient(
-            90deg,
-            rgba(20,50,40,.035) 1px,
-            transparent 1px
-        ),
-        var(--bg);
-
-    background-size:
-        42px 42px;
-
-    min-height: 100vh;
-
-    overflow-x: hidden;
-}
-
-body::before {
-
-    content: "";
-
-    position: fixed;
-
-    width: 450px;
-    height: 450px;
-
-    top: -180px;
-    right: -180px;
-
-    border-radius: 50%;
-
-    background:
-        rgba(156,230,195,.22);
-
-    filter: blur(10px);
-
-    pointer-events: none;
-
-    z-index: -1;
-}
-
-body::after {
-
-    content: "";
-
-    position: fixed;
-
-    width: 400px;
-    height: 400px;
-
-    bottom: -200px;
-    left: -150px;
-
-    border-radius: 50%;
-
-    background:
-        rgba(223,244,119,.15);
-
-    pointer-events: none;
-
-    z-index: -1;
-}
-
-a {
-    color: inherit;
-    text-decoration: none;
-}
-
-button,
-input,
-textarea,
-select {
-    font: inherit;
-}
-
-button {
-    cursor: pointer;
-}
-
-img {
-    max-width: 100%;
-}
-
-.hidden {
-    display: none !important;
-}
-
-.wrap {
-
-    width:
-        min(1180px, calc(100% - 40px));
-
-    margin-inline: auto;
 }
 
 
-/* =========================================================
-   SCROLLBAR
-   ========================================================= */
+if (closeAuth && authModal) {
 
-::-webkit-scrollbar {
-    width: 10px;
-}
+    closeAuth.addEventListener(
+        "click",
+        () => {
+            authModal.classList.remove("open");
+        }
+    );
 
-::-webkit-scrollbar-track {
-    background: #edf2ef;
-}
-
-::-webkit-scrollbar-thumb {
-
-    background: #9bb9ae;
-
-    border-radius: 20px;
-
-    border: 3px solid #edf2ef;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: var(--green);
 }
 
 
-/* =========================================================
-   TOP STRIP
-   ========================================================= */
+if (authModal) {
 
-.top-strip {
+    authModal.addEventListener(
+        "click",
+        (event) => {
 
-    background: var(--dark);
+            if (event.target === authModal) {
+                authModal.classList.remove("open");
+            }
 
-    color: rgba(255,255,255,.70);
+        }
+    );
 
-    font-size: 13px;
-}
-
-.top-strip__inner {
-
-    min-height: 37px;
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: space-between;
-
-    gap: 20px;
-}
-
-.top-actions {
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 14px;
-}
-
-.top-btn {
-
-    border: 0;
-
-    background: transparent;
-
-    color: var(--mint);
-
-    font-weight: 700;
-
-    padding: 4px;
-
-    transition: .2s ease;
-}
-
-.top-btn:hover {
-    color: white;
 }
 
 
-/* =========================================================
-   HEADER
-   ========================================================= */
+if (logoutTopBtn) {
 
-.site-header {
+    logoutTopBtn.addEventListener(
+        "click",
+        logout
+    );
 
-    position: sticky;
-
-    top: 0;
-
-    z-index: 100;
-
-    background:
-        rgba(255,255,255,.88);
-
-    backdrop-filter:
-        blur(18px);
-
-    border-bottom:
-        1px solid var(--line);
-}
-
-.site-header__inner {
-
-    min-height: 78px;
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: space-between;
-
-    gap: 30px;
 }
 
 
-/* =========================================================
-   BRAND
-   ========================================================= */
-
-.brand {
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 13px;
-}
-
-.brand-mark {
-
-    width: 45px;
-    height: 45px;
-
-    border-radius: 14px;
-
-    display: grid;
-
-    place-items: center;
-
-    background: var(--dark);
-
-    color: var(--lime);
-
-    font-family: "Manrope", sans-serif;
-
-    font-weight: 800;
-
-    font-size: 19px;
-
-    box-shadow:
-        0 8px 25px rgba(13,25,22,.15);
-
-    transition:
-        transform .25s var(--ease);
-}
-
-.brand:hover .brand-mark {
-    transform: rotate(-7deg) scale(1.05);
-}
-
-.brand strong {
-
-    display: block;
-
-    font-family:
-        "Manrope",
-        sans-serif;
-
-    font-size: 17px;
-
-    letter-spacing: -.02em;
-}
-
-.brand span {
-
-    display: block;
-
-    color: var(--muted);
-
-    font-size: 11px;
-
-    margin-top: 2px;
-}
+window.addEventListener(
+    "hashchange",
+    render
+);
 
 
-/* =========================================================
-   NAV
-   ========================================================= */
+// =====================================================
+// LOGIN
+// =====================================================
 
-.main-nav {
+if (loginForm) {
 
-    display: flex;
+    loginForm.addEventListener(
+        "submit",
+        async (event) => {
 
-    align-items: center;
+            event.preventDefault();
 
-    gap: 5px;
+            if (!sb) {
 
-    padding: 5px;
+                if (authMessage) {
+                    authMessage.textContent =
+                        "Primero debes configurar Supabase en js/config.js.";
+                }
 
-    border:
-        1px solid var(--line);
+                return;
+            }
 
-    background:
-        rgba(244,247,245,.8);
+            if (authMessage) {
+                authMessage.textContent =
+                    "Iniciando sesión...";
+            }
 
-    border-radius: 16px;
-}
+            const email =
+                document
+                    .getElementById("loginEmail")
+                    .value
+                    .trim();
 
-.main-nav a {
+            const password =
+                document
+                    .getElementById("loginPassword")
+                    .value;
 
-    position: relative;
+            try {
 
-    padding:
-        10px 15px;
+                const { data, error } =
+                    await sb.auth.signInWithPassword({
+                        email,
+                        password
+                    });
 
-    border-radius: 11px;
+                if (error) {
+                    throw error;
+                }
 
-    color: var(--text-2);
+                session = data.session;
 
-    font-size: 14px;
+                if (session) {
+                    await loadProfile();
+                }
 
-    font-weight: 600;
+                updateAuthUI();
 
-    transition:
-        all .25s var(--ease);
-}
+                if (authMessage) {
+                    authMessage.textContent = "";
+                }
 
-.main-nav a:hover {
+                if (authModal) {
+                    authModal.classList.remove("open");
+                }
 
-    background: white;
+                loginForm.reset();
 
-    color: var(--dark);
-}
+                location.hash =
+                    "#administrar";
 
-.main-nav a.active {
+            } catch (error) {
 
-    background: var(--dark);
+                console.error(error);
 
-    color: white;
+                if (authMessage) {
+                    authMessage.textContent =
+                        "No se pudo iniciar sesión. Verifica tu correo y contraseña.";
+                }
 
-    box-shadow:
-        0 8px 20px rgba(13,25,22,.13);
-}
+            }
 
-.menu-toggle {
+        }
+    );
 
-    display: none;
-
-    border: 1px solid var(--line);
-
-    border-radius: 12px;
-
-    background: white;
-
-    color: var(--text);
-
-    padding:
-        10px 15px;
-
-    font-weight: 700;
 }
 
 
-/* =========================================================
-   GENERAL
-   ========================================================= */
+// =====================================================
+// INICIAR APLICACIÓN
+// =====================================================
 
-.section {
+async function init() {
 
-    padding:
-        80px 0;
-}
+    try {
 
-.eyebrow {
+        if (sb) {
 
-    display: inline-flex;
+            const { data, error } =
+                await sb.auth.getSession();
 
-    align-items: center;
+            if (!error) {
+                session = data.session;
+            }
 
-    gap: 8px;
+            if (session) {
+                await loadProfile();
+            }
 
-    color: var(--green);
+            sb.auth.onAuthStateChange(
+                async (_event, newSession) => {
 
-    font-size: 11px;
+                    session = newSession;
+                    profile = null;
 
-    font-weight: 800;
+                    if (session) {
+                        await loadProfile();
+                    }
 
-    letter-spacing: .13em;
+                    updateAuthUI();
+                    render();
 
-    text-transform: uppercase;
-}
+                }
+            );
 
-.eyebrow::before {
+        }
 
-    content: "";
+    } catch (error) {
 
-    width: 19px;
-
-    height: 2px;
-
-    background: currentColor;
-
-    border-radius: 20px;
-}
-
-.section-head {
-
-    display: flex;
-
-    align-items: flex-end;
-
-    justify-content: space-between;
-
-    gap: 30px;
-
-    margin-bottom: 32px;
-}
-
-.section-head h2 {
-
-    margin:
-        7px 0 0;
-
-    font-family:
-        "Manrope",
-        sans-serif;
-
-    font-size:
-        clamp(27px,4vw,42px);
-
-    line-height: 1.05;
-
-    letter-spacing: -.045em;
-}
-
-
-/* =========================================================
-   HOME HERO
-   ========================================================= */
-
-.hero {
-
-    position: relative;
-
-    overflow: hidden;
-
-    padding:
-        105px 0 90px;
-
-    color: white;
-
-    background:
-        radial-gradient(
-            circle at 75% 20%,
-            rgba(156,230,195,.18),
-            transparent 28%
-        ),
-        radial-gradient(
-            circle at 10% 90%,
-            rgba(223,244,119,.10),
-            transparent 28%
-        ),
-        var(--dark);
-}
-
-.hero::before {
-
-    content: "";
-
-    position: absolute;
-
-    inset: 0;
-
-    background:
-        linear-gradient(
-            rgba(255,255,255,.025) 1px,
-            transparent 1px
-        ),
-        linear-gradient(
-            90deg,
-            rgba(255,255,255,.025) 1px,
-            transparent 1px
+        console.error(
+            "Error al iniciar Supabase:",
+            error
         );
 
-    background-size:
-        45px 45px;
+    }
 
-    pointer-events: none;
-}
+    updateAuthUI();
+    render();
 
-.hero__inner {
-
-    position: relative;
-
-    z-index: 2;
-
-    display: grid;
-
-    grid-template-columns:
-        minmax(0,1.3fr)
-        minmax(300px,.7fr);
-
-    gap: 70px;
-
-    align-items: center;
-}
-
-.hero .eyebrow {
-    color: var(--mint);
-}
-
-.hero h1 {
-
-    max-width: 700px;
-
-    margin:
-        18px 0;
-
-    font-family:
-        "Manrope",
-        sans-serif;
-
-    font-size:
-        clamp(48px,7vw,85px);
-
-    line-height: .94;
-
-    letter-spacing: -.065em;
-}
-
-.hero__copy > p {
-
-    max-width: 620px;
-
-    color:
-        rgba(255,255,255,.68);
-
-    font-size: 18px;
-
-    line-height: 1.75;
-}
-
-.hero__actions {
-
-    display: flex;
-
-    flex-wrap: wrap;
-
-    gap: 12px;
-
-    margin-top: 30px;
 }
 
 
-/* =========================================================
-   BUTTONS
-   ========================================================= */
+// =====================================================
+// ACTUALIZAR SESIÓN
+// =====================================================
 
-.btn {
+function updateAuthUI() {
 
-    min-height: 48px;
+    const logged = !!session;
 
-    display: inline-flex;
+    if (loginTopBtn) {
 
-    align-items: center;
-
-    justify-content: center;
-
-    padding:
-        0 21px;
-
-    border:
-        1px solid transparent;
-
-    border-radius:
-        13px;
-
-    font-weight: 800;
-
-    font-size: 14px;
-
-    transition:
-        transform .25s var(--ease),
-        box-shadow .25s var(--ease),
-        background .25s ease;
-}
-
-.btn:hover {
-
-    transform:
-        translateY(-3px);
-}
-
-.btn.primary {
-
-    background:
-        var(--lime);
-
-    color:
-        var(--dark);
-
-    box-shadow:
-        0 12px 30px
-        rgba(223,244,119,.13);
-}
-
-.btn.primary:hover {
-
-    box-shadow:
-        0 16px 35px
-        rgba(223,244,119,.22);
-}
-
-.btn.secondary {
-
-    color: white;
-
-    border-color:
-        rgba(255,255,255,.18);
-
-    background:
-        rgba(255,255,255,.07);
-
-    backdrop-filter:
-        blur(10px);
-}
-
-.btn.secondary:hover {
-
-    background:
-        rgba(255,255,255,.12);
-}
-
-
-/* =========================================================
-   HERO CARD
-   ========================================================= */
-
-.hero-card {
-
-    position: relative;
-
-    padding:
-        32px;
-
-    border:
-        1px solid
-        rgba(255,255,255,.12);
-
-    border-radius:
-        var(--radius-lg);
-
-    background:
-        rgba(255,255,255,.065);
-
-    backdrop-filter:
-        blur(16px);
-
-    box-shadow:
-        0 35px 80px
-        rgba(0,0,0,.18);
-}
-
-.hero-card::before {
-
-    content: "";
-
-    position: absolute;
-
-    width: 11px;
-    height: 11px;
-
-    top: 25px;
-    right: 25px;
-
-    border-radius: 50%;
-
-    background:
-        var(--lime);
-
-    box-shadow:
-        0 0 0 7px
-        rgba(223,244,119,.08);
-}
-
-.hero-card small {
-
-    color:
-        var(--mint);
-
-    font-weight: 800;
-
-    text-transform: uppercase;
-
-    letter-spacing: .1em;
-
-    font-size: 10px;
-}
-
-.hero-card > strong {
-
-    display: block;
-
-    margin:
-        13px 0;
-
-    font-family:
-        "Manrope",
-        sans-serif;
-
-    font-size: 27px;
-
-    line-height: 1.1;
-}
-
-.hero-card > p {
-
-    color:
-        rgba(255,255,255,.60);
-
-    line-height: 1.65;
-}
-
-.hero-card__stats {
-
-    display: grid;
-
-    grid-template-columns:
-        repeat(2,1fr);
-
-    gap: 10px;
-
-    margin-top: 25px;
-}
-
-.hero-card__stats div {
-
-    padding:
-        18px;
-
-    border-radius:
-        16px;
-
-    background:
-        rgba(255,255,255,.07);
-
-    border:
-        1px solid
-        rgba(255,255,255,.08);
-}
-
-.hero-card__stats b {
-
-    display: block;
-
-    color:
-        var(--lime);
-
-    font-family:
-        "Manrope",
-        sans-serif;
-
-    font-size: 28px;
-}
-
-.hero-card__stats span {
-
-    color:
-        rgba(255,255,255,.55);
-
-    font-size: 12px;
-}
-
-
-/* =========================================================
-   QUICK CARDS
-   ========================================================= */
-
-.quick-grid {
-
-    display: grid;
-
-    grid-template-columns:
-        repeat(3,1fr);
-
-    gap: 17px;
-}
-
-.quick-card {
-
-    position: relative;
-
-    overflow: hidden;
-
-    min-height: 220px;
-
-    display: flex;
-
-    flex-direction: column;
-
-    justify-content:
-        space-between;
-
-    padding:
-        27px;
-
-    background:
-        var(--surface);
-
-    border:
-        1px solid var(--line);
-
-    border-radius:
-        var(--radius);
-
-    box-shadow:
-        var(--shadow-sm);
-
-    transition:
-        all .3s var(--ease);
-}
-
-.quick-card::after {
-
-    content: "";
-
-    position: absolute;
-
-    width: 120px;
-    height: 120px;
-
-    border-radius: 50%;
-
-    right: -70px;
-    top: -70px;
-
-    background:
-        var(--mint-light);
-
-    transition:
-        transform .4s var(--ease);
-}
-
-.quick-card:hover {
-
-    transform:
-        translateY(-7px);
-
-    box-shadow:
-        var(--shadow);
-}
-
-.quick-card:hover::after {
-
-    transform:
-        scale(1.5);
-}
-
-.quick-card strong {
-
-    position: relative;
-
-    z-index: 2;
-
-    max-width: 200px;
-
-    font-family:
-        "Manrope",
-        sans-serif;
-
-    font-size: 21px;
-
-    letter-spacing: -.03em;
-}
-
-.quick-card p {
-
-    position: relative;
-
-    z-index: 2;
-
-    color:
-        var(--muted);
-
-    line-height: 1.65;
-
-    font-size: 14px;
-}
-
-.link-arrow {
-
-    position: relative;
-
-    z-index: 2;
-
-    color:
-        var(--green);
-
-    font-size: 13px;
-
-    font-weight: 800;
-}
-
-
-/* =========================================================
-   PAGE BANNER
-   ========================================================= */
-
-.page-banner {
-
-    position: relative;
-
-    overflow: hidden;
-
-    padding:
-        70px 0;
-
-    background:
-        var(--dark);
-
-    color: white;
-}
-
-.page-banner::after {
-
-    content: "";
-
-    position: absolute;
-
-    width: 330px;
-    height: 330px;
-
-    right: -100px;
-    top: -160px;
-
-    border-radius: 50%;
-
-    background:
-        rgba(156,230,195,.12);
-}
-
-.page-banner .eyebrow {
-    color: var(--mint);
-}
-
-.page-banner h1 {
-
-    margin:
-        12px 0 8px;
-
-    font-family:
-        "Manrope",
-        sans-serif;
-
-    font-size:
-        clamp(38px,6vw,65px);
-
-    line-height: 1;
-
-    letter-spacing: -.055em;
-}
-
-.page-banner p {
-
-    max-width: 650px;
-
-    color:
-        rgba(255,255,255,.60);
-
-    line-height: 1.7;
-}
-
-
-/* =========================================================
-   NUEVO MAPA ACADÉMICO
-   ========================================================= */
-
-.academic-journey-hero {
-
-    position: relative;
-
-    overflow: hidden;
-
-    padding:
-        95px 0 85px;
-
-    color: white;
-
-    background:
-        radial-gradient(
-            circle at 75% 20%,
-            rgba(156,230,195,.18),
-            transparent 30%
-        ),
-        radial-gradient(
-            circle at 15% 100%,
-            rgba(223,244,119,.10),
-            transparent 30%
-        ),
-        var(--dark);
-}
-
-.academic-journey-hero::before {
-
-    content: "";
-
-    position: absolute;
-
-    inset: 0;
-
-    opacity: .5;
-
-    background-image:
-        radial-gradient(
-            rgba(255,255,255,.11)
-            1px,
-            transparent 1px
+        loginTopBtn.classList.toggle(
+            "hidden",
+            logged
         );
 
-    background-size:
-        28px 28px;
+    }
 
-    pointer-events: none;
-}
+    if (logoutTopBtn) {
 
-.journey-hero-grid {
-
-    position: relative;
-
-    z-index: 2;
-
-    display: grid;
-
-    grid-template-columns:
-        minmax(0,1.3fr)
-        minmax(300px,.7fr);
-
-    gap: 75px;
-
-    align-items: center;
-}
-
-.journey-kicker {
-
-    display: inline-flex;
-
-    align-items: center;
-
-    gap: 9px;
-
-    color:
-        var(--mint);
-
-    font-size: 11px;
-
-    font-weight: 800;
-
-    letter-spacing: .14em;
-}
-
-.journey-kicker::before {
-
-    content: "";
-
-    width: 24px;
-    height: 2px;
-
-    background:
-        currentColor;
-}
-
-.journey-kicker.dark {
-
-    color:
-        var(--green);
-}
-
-.journey-hero-copy h1 {
-
-    margin:
-        18px 0;
-
-    max-width: 650px;
-
-    font-family:
-        "Manrope",
-        sans-serif;
-
-    font-size:
-        clamp(50px,7vw,82px);
-
-    line-height: .95;
-
-    letter-spacing: -.065em;
-}
-
-.journey-hero-copy h1 span {
-
-    display: block;
-
-    color:
-        var(--lime);
-}
-
-.journey-hero-copy > p {
-
-    max-width: 600px;
-
-    color:
-        rgba(255,255,255,.63);
-
-    font-size: 17px;
-
-    line-height: 1.75;
-}
-
-.journey-summary {
-
-    display: flex;
-
-    gap: 8px;
-
-    margin-top: 33px;
-}
-
-.journey-summary div {
-
-    min-width: 110px;
-
-    padding:
-        15px 18px;
-
-    border:
-        1px solid
-        rgba(255,255,255,.09);
-
-    border-radius:
-        15px;
-
-    background:
-        rgba(255,255,255,.055);
-}
-
-.journey-summary strong {
-
-    display: block;
-
-    color:
-        var(--lime);
-
-    font-family:
-        "Manrope",
-        sans-serif;
-
-    font-size: 25px;
-}
-
-.journey-summary span {
-
-    color:
-        rgba(255,255,255,.50);
-
-    font-size: 11px;
-}
-
-
-/* =========================================================
-   PROGRESS CARD
-   ========================================================= */
-
-.journey-progress-card {
-
-    position: relative;
-
-    padding:
-        32px;
-
-    border-radius:
-        30px;
-
-    border:
-        1px solid
-        rgba(255,255,255,.12);
-
-    background:
-        rgba(255,255,255,.06);
-
-    backdrop-filter:
-        blur(18px);
-
-    box-shadow:
-        0 35px 80px
-        rgba(0,0,0,.17);
-}
-
-.progress-mini-title {
-
-    color:
-        rgba(255,255,255,.50);
-
-    font-size: 10px;
-
-    font-weight: 800;
-
-    letter-spacing: .14em;
-}
-
-.progress-number {
-
-    margin:
-        18px 0 13px;
-
-    color:
-        var(--lime);
-
-    font-family:
-        "Manrope",
-        sans-serif;
-
-    font-size: 72px;
-
-    font-weight: 800;
-
-    letter-spacing: -.07em;
-
-    line-height: 1;
-}
-
-.progress-number small {
-
-    font-size: 28px;
-
-    color:
-        var(--mint);
-}
-
-.progress-track {
-
-    width: 100%;
-    height: 8px;
-
-    overflow: hidden;
-
-    border-radius: 20px;
-
-    background:
-        rgba(255,255,255,.10);
-}
-
-.progress-fill {
-
-    height: 100%;
-
-    border-radius: inherit;
-
-    background:
-        linear-gradient(
-            90deg,
-            var(--mint),
-            var(--lime)
+        logoutTopBtn.classList.toggle(
+            "hidden",
+            !logged
         );
 
-    animation:
-        progressGrow
-        1.2s var(--ease);
-}
-
-@keyframes progressGrow {
-
-    from {
-        width: 0;
     }
-}
 
-.journey-progress-card p {
+    document
+        .querySelectorAll(".admin-link")
+        .forEach((element) => {
 
-    margin:
-        17px 0;
+            element.classList.toggle(
+                "hidden",
+                !logged
+            );
 
-    color:
-        rgba(255,255,255,.58);
+        });
 
-    line-height: 1.6;
 
-    font-size: 13px;
-}
+    if (userState) {
 
-.journey-admin-link {
+        userState.textContent =
+            logged
+                ? (
+                    profile?.full_name ||
+                    session.user.email
+                )
+                : "Invitado";
 
-    display: inline-flex;
+    }
 
-    margin-top: 8px;
-
-    color:
-        var(--lime);
-
-    font-size: 13px;
-
-    font-weight: 800;
-}
-
-.journey-public-state {
-
-    display: inline-flex;
-
-    padding:
-        8px 11px;
-
-    margin-top: 6px;
-
-    border-radius:
-        9px;
-
-    background:
-        rgba(156,230,195,.09);
-
-    color:
-        var(--mint);
-
-    font-size: 11px;
-
-    font-weight: 800;
 }
 
 
-/* =========================================================
-   JOURNEY SECTION
-   ========================================================= */
+// =====================================================
+// CERRAR SESIÓN
+// =====================================================
 
-.journey-section {
+async function logout() {
 
-    padding:
-        90px 0 110px;
-}
+    try {
 
-.journey-heading {
+        if (sb) {
+            await sb.auth.signOut();
+        }
 
-    display: flex;
+    } catch (error) {
 
-    align-items: flex-end;
+        console.error(error);
 
-    justify-content: space-between;
+    }
 
-    gap: 50px;
+    session = null;
+    profile = null;
 
-    margin-bottom: 48px;
-}
+    updateAuthUI();
 
-.journey-heading h2 {
+    location.hash =
+        "#inicio";
 
-    margin:
-        11px 0 0;
-
-    font-family:
-        "Manrope",
-        sans-serif;
-
-    font-size:
-        clamp(36px,5vw,60px);
-
-    line-height: .98;
-
-    letter-spacing: -.055em;
-}
-
-.journey-heading > p {
-
-    max-width: 410px;
-
-    margin: 0;
-
-    color:
-        var(--muted);
-
-    line-height: 1.7;
 }
 
 
-/* =========================================================
-   JOURNEY BOARD
-   ========================================================= */
+// =====================================================
+// CARGAR PERFIL
+// =====================================================
 
-.journey-board {
+async function loadProfile() {
 
-    position: relative;
+    if (!sb || !session) {
+        return;
+    }
 
-    overflow: hidden;
+    try {
 
-    padding:
-        38px;
+        const { data, error } =
+            await sb
+                .from("profiles")
+                .select("*")
+                .eq(
+                    "id",
+                    session.user.id
+                )
+                .maybeSingle();
 
-    border:
-        1px solid var(--line);
+        if (error) {
+            throw error;
+        }
 
-    border-radius:
-        34px;
+        profile =
+            data || null;
 
-    background:
-        var(--surface);
+    } catch (error) {
 
-    box-shadow:
-        var(--shadow);
-
-    isolation: isolate;
-}
-
-.journey-board::before {
-
-    content: "";
-
-    position: absolute;
-
-    inset: 0;
-
-    z-index: -1;
-
-    background:
-        linear-gradient(
-            rgba(20,60,50,.035) 1px,
-            transparent 1px
-        ),
-        linear-gradient(
-            90deg,
-            rgba(20,60,50,.035) 1px,
-            transparent 1px
+        console.error(
+            "Error al cargar perfil:",
+            error
         );
 
-    background-size:
-        30px 30px;
+        profile = null;
+
+    }
+
 }
 
 
-/* =========================================================
-   START
-   ========================================================= */
+// =====================================================
+// NAVEGACIÓN
+// =====================================================
 
-.journey-start {
+function setActive(route) {
 
-    display: flex;
+    document
+        .querySelectorAll("[data-route]")
+        .forEach((link) => {
 
-    align-items: center;
+            link.classList.toggle(
+                "active",
+                link.dataset.route === route
+            );
 
-    gap: 17px;
+        });
 
-    margin-bottom: 38px;
-}
 
-.journey-start span {
+    if (nav) {
+        nav.classList.remove("open");
+    }
 
-    display: grid;
-
-    place-items: center;
-
-    width: 62px;
-    height: 62px;
-
-    border-radius: 50%;
-
-    background:
-        var(--dark);
-
-    color:
-        var(--lime);
-
-    font-size: 9px;
-
-    font-weight: 800;
-
-    letter-spacing: .12em;
-
-    box-shadow:
-        0 12px 30px
-        rgba(13,25,22,.15);
-}
-
-.journey-start strong {
-
-    font-family:
-        "Manrope",
-        sans-serif;
-
-    font-size: 17px;
-
-    line-height: 1.25;
 }
 
 
-/* =========================================================
-   PATH
-   ========================================================= */
+// =====================================================
+// PLANTILLA INTERNA
+// =====================================================
 
-.journey-path {
+function page(
+    title,
+    subtitle,
+    content
+) {
 
-    position: relative;
+    return `
 
-    display: grid;
+        <section class="page-banner">
 
-    grid-template-columns:
-        repeat(4,1fr);
+            <div class="wrap">
 
-    gap:
-        34px 42px;
+                <span class="eyebrow">
+                    Repositorio UPLA
+                </span>
 
-    padding:
-        10px 10px 25px;
+                <h1>
+                    ${title}
+                </h1>
+
+                <p>
+                    ${subtitle}
+                </p>
+
+            </div>
+
+        </section>
+
+
+        <section class="section">
+
+            <div class="wrap">
+
+                ${content}
+
+            </div>
+
+        </section>
+
+    `;
+
 }
 
-.journey-path::before {
 
-    content: "";
+// =====================================================
+// ROUTER
+// =====================================================
 
-    position: absolute;
+function render() {
 
-    left: 8%;
-    right: 8%;
+    if (!app) {
 
-    top: 50%;
-
-    height: 2px;
-
-    z-index: -1;
-
-    background:
-        repeating-linear-gradient(
-            90deg,
-            rgba(28,92,77,.18) 0,
-            rgba(28,92,77,.18) 8px,
-            transparent 8px,
-            transparent 16px
+        console.error(
+            "No se encontró #app."
         );
-}
 
-
-/* =========================================================
-   WEEK NODE
-   ========================================================= */
-
-.journey-week {
-
-    position: relative;
-
-    min-height: 165px;
-
-    display: flex;
-
-    flex-direction: column;
-
-    align-items: center;
-
-    justify-content: center;
-
-    text-align: center;
-
-    padding:
-        17px 10px;
-
-    border-radius:
-        22px;
-
-    transition:
-        transform .3s var(--ease),
-        background .3s ease,
-        box-shadow .3s var(--ease);
-
-    animation:
-        journeyEnter
-        .55s var(--ease)
-        both;
-
-    animation-delay:
-        calc(var(--week-index) * 45ms);
-}
-
-@keyframes journeyEnter {
-
-    from {
-
-        opacity: 0;
-
-        transform:
-            translateY(20px);
+        return;
     }
 
-    to {
 
-        opacity: 1;
+    const raw =
+        location.hash.replace("#", "") ||
+        "inicio";
 
-        transform:
-            translateY(0);
-    }
-}
 
-.journey-week:hover {
+    const [route, param] =
+        raw.split("/");
 
-    z-index: 3;
 
-    transform:
-        translateY(-7px);
+    setActive(
+        route === "semana"
+            ? "semanas"
+            : route
+    );
 
-    background:
-        var(--surface-soft);
 
-    box-shadow:
-        0 16px 35px
-        rgba(20,40,32,.08);
-}
+    switch (route) {
 
+        case "inicio":
 
-/* =========================================================
-   NODE
-   ========================================================= */
+            renderHome();
+            break;
 
-.journey-node {
 
-    position: relative;
+        case "semanas":
 
-    width: 67px;
-    height: 67px;
+            renderWeeks();
+            break;
 
-    display: grid;
 
-    place-items: center;
+        case "semana":
 
-    border-radius: 50%;
+            renderWeek(
+                Number(param) || 1
+            );
 
-    background:
-        white;
+            break;
 
-    border:
-        2px solid
-        rgba(28,92,77,.18);
 
-    box-shadow:
-        0 10px 25px
-        rgba(20,50,40,.10);
+        case "actividades":
 
-    transition:
-        all .3s var(--ease);
-}
+            renderActivities();
+            break;
 
-.journey-status {
 
-    position: relative;
+        case "perfil":
 
-    z-index: 2;
+            renderProfile();
+            break;
 
-    color:
-        var(--green);
 
-    font-family:
-        "Manrope",
-        sans-serif;
+        case "administrar":
 
-    font-size: 16px;
+            renderAdmin();
+            break;
 
-    font-weight: 800;
-}
 
-.journey-pulse {
+        default:
 
-    position: absolute;
+            renderHome();
 
-    inset: -7px;
-
-    border-radius: 50%;
-
-    border:
-        1px solid
-        rgba(28,92,77,.12);
-
-    opacity: 0;
-
-    transform:
-        scale(.8);
-
-    transition:
-        all .3s ease;
-}
-
-.journey-week:hover
-.journey-pulse {
-
-    opacity: 1;
-
-    transform:
-        scale(1);
-}
-
-.journey-week:hover
-.journey-node {
-
-    transform:
-        scale(1.08);
-
-    border-color:
-        var(--green);
-
-    box-shadow:
-        0 15px 35px
-        rgba(28,92,77,.17);
-}
-
-
-/* =========================================================
-   COMPLETED NODE
-   ========================================================= */
-
-.journey-week.completed
-.journey-node {
-
-    background:
-        var(--dark);
-
-    border-color:
-        var(--dark);
-}
-
-.journey-week.completed
-.journey-status {
-
-    color:
-        var(--lime);
-
-    font-size: 20px;
-}
-
-.journey-week.completed
-.journey-pulse {
-
-    border-color:
-        rgba(223,244,119,.30);
-}
-
-
-/* =========================================================
-   WEEK INFO
-   ========================================================= */
-
-.journey-info {
-
-    margin-top:
-        13px;
-}
-
-.journey-label {
-
-    display: block;
-
-    color:
-        var(--green);
-
-    font-size: 9px;
-
-    font-weight: 800;
-
-    letter-spacing: .11em;
-}
-
-.journey-info strong {
-
-    display: block;
-
-    margin:
-        5px 0 3px;
-
-    font-family:
-        "Manrope",
-        sans-serif;
-
-    font-size: 13px;
-}
-
-.journey-info small {
-
-    color:
-        var(--muted);
-
-    font-size: 10px;
-}
-
-
-/* =========================================================
-   FINISH
-   ========================================================= */
-
-.journey-finish {
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: flex-end;
-
-    gap: 14px;
-
-    margin-top: 30px;
-}
-
-.finish-symbol {
-
-    width: 60px;
-    height: 60px;
-
-    display: grid;
-
-    place-items: center;
-
-    border-radius: 18px;
-
-    background:
-        var(--lime);
-
-    color:
-        var(--dark);
-
-    font-size: 23px;
-
-    box-shadow:
-        0 12px 30px
-        rgba(170,190,70,.18);
-
-    transform:
-        rotate(5deg);
-}
-
-.journey-finish span {
-
-    display: block;
-
-    color:
-        var(--muted);
-
-    font-size: 9px;
-
-    font-weight: 800;
-
-    letter-spacing: .12em;
-}
-
-.journey-finish strong {
-
-    display: block;
-
-    margin-top: 3px;
-
-    font-family:
-        "Manrope",
-        sans-serif;
-
-    font-size: 17px;
-}
-
-
-/* =========================================================
-   HELP
-   ========================================================= */
-
-.journey-help {
-
-    max-width: 620px;
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 17px;
-
-    margin:
-        25px auto 0;
-
-    padding:
-        19px 22px;
-
-    border-radius:
-        18px;
-
-    border:
-        1px solid var(--line);
-
-    background:
-        rgba(255,255,255,.65);
-}
-
-.help-number {
-
-    flex:
-        0 0 42px;
-
-    width: 42px;
-    height: 42px;
-
-    display: grid;
-
-    place-items: center;
-
-    border-radius: 50%;
-
-    background:
-        var(--mint-light);
-
-    color:
-        var(--green);
-
-    font-family:
-        "Manrope",
-        sans-serif;
-
-    font-weight: 800;
-}
-
-.journey-help strong {
-
-    font-size: 13px;
-}
-
-.journey-help p {
-
-    margin:
-        4px 0 0;
-
-    color:
-        var(--muted);
-
-    font-size: 12px;
-
-    line-height: 1.5;
-}
-
-
-/* =========================================================
-   FALLBACK WEEK GRID
-   ========================================================= */
-
-.week-grid {
-
-    display: grid;
-
-    grid-template-columns:
-        repeat(4,1fr);
-
-    gap: 17px;
-}
-
-.week-card {
-
-    padding:
-        25px;
-
-    border:
-        1px solid var(--line);
-
-    border-radius:
-        var(--radius);
-
-    background:
-        white;
-
-    box-shadow:
-        var(--shadow-sm);
-
-    transition:
-        all .3s var(--ease);
-}
-
-.week-card:hover {
-
-    transform:
-        translateY(-5px);
-
-    box-shadow:
-        var(--shadow);
-}
-
-.week-number {
-
-    width: 48px;
-    height: 48px;
-
-    display: grid;
-
-    place-items: center;
-
-    margin-bottom:
-        20px;
-
-    border-radius:
-        14px;
-
-    background:
-        var(--dark);
-
-    color:
-        var(--lime);
-
-    font-family:
-        "Manrope",
-        sans-serif;
-
-    font-weight: 800;
-}
-
-.week-card h3 {
-
-    margin:
-        0 0 8px;
-
-    font-family:
-        "Manrope",
-        sans-serif;
-}
-
-.week-card p {
-
-    color:
-        var(--muted);
-
-    font-size: 13px;
-
-    line-height: 1.6;
-}
-
-.week-meta {
-
-    color:
-        var(--green);
-
-    font-size: 11px;
-
-    font-weight: 800;
-
-    margin:
-        17px 0;
-}
-
-
-/* =========================================================
-   PANELS
-   ========================================================= */
-
-.panel {
-
-    padding:
-        28px;
-
-    border:
-        1px solid var(--line);
-
-    border-radius:
-        var(--radius);
-
-    background:
-        white;
-
-    box-shadow:
-        var(--shadow-sm);
-}
-
-.panel h2 {
-
-    font-family:
-        "Manrope",
-        sans-serif;
-
-    letter-spacing: -.03em;
-}
-
-
-/* =========================================================
-   ACTIVITY + FILE LIST
-   ========================================================= */
-
-.activity-list,
-.file-list {
-
-    display: grid;
-
-    gap: 10px;
-}
-
-.activity-row,
-.file-row {
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content:
-        space-between;
-
-    gap: 20px;
-
-    padding:
-        18px 20px;
-
-    border:
-        1px solid var(--line);
-
-    border-radius:
-        15px;
-
-    background:
-        white;
-
-    transition:
-        all .25s var(--ease);
-}
-
-.activity-row:hover,
-.file-row:hover {
-
-    transform:
-        translateX(4px);
-
-    border-color:
-        rgba(28,92,77,.25);
-
-    box-shadow:
-        var(--shadow-sm);
-}
-
-.activity-row strong,
-.file-row strong {
-
-    display: block;
-
-    font-size: 14px;
-}
-
-.activity-row span,
-.file-row span {
-
-    display: block;
-
-    margin-top: 4px;
-
-    color:
-        var(--muted);
-
-    font-size: 12px;
-}
-
-
-/* =========================================================
-   BADGES
-   ========================================================= */
-
-.badge {
-
-    display: inline-flex !important;
-
-    width: max-content;
-
-    padding:
-        7px 11px;
-
-    margin: 0 !important;
-
-    border-radius:
-        20px;
-
-    font-size:
-        10px !important;
-
-    font-weight: 800;
-}
-
-.badge.done {
-
-    color:
-        #126040;
-
-    background:
-        #dcf8e9;
-}
-
-.badge.pending {
-
-    color:
-        #795d0a;
-
-    background:
-        #fff4c7;
-}
-
-
-/* =========================================================
-   SMALL BUTTONS
-   ========================================================= */
-
-.week-actions {
-
-    display: flex;
-
-    flex-wrap: wrap;
-
-    gap: 7px;
-}
-
-.small-btn {
-
-    display: inline-flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    min-height: 35px;
-
-    padding:
-        0 12px;
-
-    border:
-        1px solid var(--line);
-
-    border-radius:
-        9px;
-
-    background:
-        white;
-
-    color:
-        var(--text);
-
-    font-size: 11px;
-
-    font-weight: 800;
-
-    transition:
-        all .2s ease;
-}
-
-.small-btn:hover {
-
-    background:
-        var(--surface-soft);
-
-    transform:
-        translateY(-2px);
-}
-
-.small-btn.primary {
-
-    background:
-        var(--dark);
-
-    border-color:
-        var(--dark);
-
-    color:
-        white;
-}
-
-
-/* =========================================================
-   PROFILE
-   ========================================================= */
-
-.profile-card {
-
-    display: grid;
-
-    grid-template-columns:
-        180px 1fr;
-
-    gap: 45px;
-
-    align-items: start;
-
-    padding:
-        38px;
-
-    border:
-        1px solid var(--line);
-
-    border-radius:
-        30px;
-
-    background:
-        white;
-
-    box-shadow:
-        var(--shadow);
-}
-
-.profile-avatar {
-
-    width: 180px;
-    height: 180px;
-
-    object-fit: cover;
-
-    border-radius:
-        27px;
-
-    border:
-        7px solid
-        var(--surface-soft);
-
-    box-shadow:
-        var(--shadow-sm);
-}
-
-.profile-avatar.fallback {
-
-    display: grid;
-
-    place-items: center;
-
-    background:
-        var(--dark);
-
-    color:
-        var(--lime);
-
-    font-family:
-        "Manrope",
-        sans-serif;
-
-    font-size: 43px;
-
-    font-weight: 800;
-}
-
-.profile-card h2 {
-
-    margin:
-        8px 0;
-
-    font-family:
-        "Manrope",
-        sans-serif;
-
-    font-size:
-        clamp(28px,4vw,42px);
-
-    letter-spacing: -.045em;
-}
-
-.profile-card > div > p {
-
-    max-width: 700px;
-
-    color:
-        var(--muted);
-
-    line-height: 1.7;
-}
-
-.info-grid {
-
-    display: grid;
-
-    grid-template-columns:
-        repeat(2,1fr);
-
-    gap: 10px;
-
-    margin-top: 24px;
-}
-
-.info-grid div {
-
-    padding:
-        17px;
-
-    border-radius:
-        14px;
-
-    background:
-        var(--surface-soft);
-}
-
-.info-grid span {
-
-    display: block;
-
-    margin-bottom: 4px;
-
-    color:
-        var(--muted);
-
-    font-size: 10px;
-
-    text-transform: uppercase;
-
-    letter-spacing: .08em;
-
-    font-weight: 700;
-}
-
-.info-grid strong {
-
-    font-size: 13px;
-}
-
-
-/* =========================================================
-   ADMIN
-   ========================================================= */
-
-.admin-grid {
-
-    display: grid;
-
-    grid-template-columns:
-        repeat(2,1fr);
-
-    gap: 20px;
-}
-
-.form-stack {
-
-    display: grid;
-
-    gap: 17px;
-
-    margin-top: 22px;
-}
-
-.form-stack label {
-
-    display: grid;
-
-    gap: 7px;
-
-    color:
-        var(--text-2);
-
-    font-size: 12px;
-
-    font-weight: 700;
-}
-
-.form-stack input,
-.form-stack textarea,
-.form-stack select {
-
-    width: 100%;
-
-    border:
-        1px solid var(--line);
-
-    outline: none;
-
-    border-radius:
-        12px;
-
-    background:
-        #fafcfb;
-
-    color:
-        var(--text);
-
-    padding:
-        13px 14px;
-
-    transition:
-        border .2s ease,
-        box-shadow .2s ease,
-        background .2s ease;
-}
-
-.form-stack textarea {
-    resize: vertical;
-}
-
-.form-stack input:focus,
-.form-stack textarea:focus,
-.form-stack select:focus {
-
-    background:
-        white;
-
-    border-color:
-        var(--green-3);
-
-    box-shadow:
-        0 0 0 4px
-        rgba(58,166,127,.10);
-}
-
-.form-message {
-
-    min-height: 20px;
-
-    color:
-        var(--green);
-
-    font-size: 12px;
-
-    font-weight: 700;
-}
-
-
-/* =========================================================
-   MODAL
-   ========================================================= */
-
-.modal {
-
-    position: fixed;
-
-    inset: 0;
-
-    z-index: 1000;
-
-    display: none;
-
-    align-items: center;
-
-    justify-content: center;
-
-    padding: 20px;
-
-    background:
-        rgba(5,15,12,.66);
-
-    backdrop-filter:
-        blur(9px);
-}
-
-.modal.open {
-    display: flex;
-}
-
-.modal-card {
-
-    width:
-        min(520px,100%);
-
-    max-height:
-        calc(100vh - 40px);
-
-    overflow-y: auto;
-
-    padding:
-        30px;
-
-    border:
-        1px solid
-        rgba(255,255,255,.15);
-
-    border-radius:
-        27px;
-
-    background:
-        white;
-
-    box-shadow:
-        0 40px 100px
-        rgba(0,0,0,.30);
-
-    animation:
-        modalIn .3s var(--ease);
-}
-
-@keyframes modalIn {
-
-    from {
-
-        opacity: 0;
-
-        transform:
-            translateY(20px)
-            scale(.97);
-    }
-
-    to {
-
-        opacity: 1;
-
-        transform:
-            translateY(0)
-            scale(1);
-    }
-}
-
-.modal-head {
-
-    display: flex;
-
-    align-items: flex-start;
-
-    justify-content:
-        space-between;
-
-    gap: 20px;
-}
-
-.modal-head h2 {
-
-    margin:
-        7px 0 0;
-
-    font-family:
-        "Manrope",
-        sans-serif;
-
-    font-size: 28px;
-
-    letter-spacing: -.04em;
-}
-
-.close-btn {
-
-    border:
-        1px solid var(--line);
-
-    border-radius:
-        10px;
-
-    background:
-        var(--surface-soft);
-
-    color:
-        var(--text);
-
-    padding:
-        9px 12px;
-
-    font-size: 11px;
-
-    font-weight: 800;
-}
-
-
-/* =========================================================
-   PARTICLES
-   ========================================================= */
-
-.tech-particles {
-
-    position: fixed;
-
-    inset: 0;
-
-    overflow: hidden;
-
-    pointer-events: none;
-
-    z-index: -1;
-}
-
-.tech-particle {
-
-    position: absolute;
-
-    border-radius: 50%;
-
-    background:
-        rgba(28,92,77,.13);
-
-    animation:
-        particleFloat
-        var(--duration)
-        ease-in-out
-        var(--delay)
-        infinite alternate;
-}
-
-@keyframes particleFloat {
-
-    from {
-
-        transform:
-            translateY(0)
-            translateX(0);
-
-        opacity: .2;
-    }
-
-    to {
-
-        transform:
-            translateY(-45px)
-            translateX(20px);
-
-        opacity: .7;
-    }
-}
-
-
-/* =========================================================
-   FOOTER
-   ========================================================= */
-
-.site-footer {
-
-    display: flex;
-
-    justify-content:
-        space-between;
-
-    gap: 30px;
-
-    padding:
-        32px 0 40px;
-
-    border-top:
-        1px solid var(--line);
-}
-
-.site-footer strong {
-
-    display: block;
-
-    font-family:
-        "Manrope",
-        sans-serif;
-
-    font-size: 14px;
-}
-
-.site-footer span {
-
-    display: block;
-
-    margin-top: 4px;
-
-    color:
-        var(--muted);
-
-    font-size: 11px;
-}
-
-.site-footer p {
-
-    max-width: 400px;
-
-    margin: 0;
-
-    color:
-        var(--muted);
-
-    font-size: 11px;
-
-    line-height: 1.6;
-
-    text-align: right;
-}
-
-
-/* =========================================================
-   RESPONSIVE TABLET
-   ========================================================= */
-
-@media (max-width: 950px) {
-
-    .hero__inner,
-    .journey-hero-grid {
-
-        grid-template-columns:
-            1fr;
-
-        gap: 45px;
-    }
-
-    .quick-grid {
-
-        grid-template-columns:
-            repeat(2,1fr);
-    }
-
-    .week-grid {
-
-        grid-template-columns:
-            repeat(2,1fr);
-    }
-
-    .journey-path {
-
-        grid-template-columns:
-            repeat(2,1fr);
-    }
-
-    .journey-path::before {
-        display: none;
-    }
-
-    .admin-grid {
-
-        grid-template-columns:
-            1fr;
     }
 
 }
 
 
-/* =========================================================
-   RESPONSIVE MOBILE
-   ========================================================= */
+// =====================================================
+// INICIO
+// =====================================================
 
-@media (max-width: 720px) {
+function renderHome() {
 
-    .wrap {
+    app.innerHTML = `
 
-        width:
-            min(100% - 26px,1180px);
+        <section class="hero">
+
+            <div class="wrap hero__inner">
+
+
+                <div class="hero__copy">
+
+                    <span class="eyebrow">
+                        Ingeniería de Sistemas y Computación
+                    </span>
+
+
+                    <h1>
+                        Mi Repositorio
+                        Académico
+                    </h1>
+
+
+                    <p>
+                        Espacio personal para organizar y presentar
+                        trabajos, actividades, materiales y avances
+                        académicos durante las 16 semanas del ciclo.
+                    </p>
+
+
+                    <div class="hero__actions">
+
+                        <a
+                            href="#semanas"
+                            class="btn primary"
+                        >
+                            Explorar mi recorrido
+                        </a>
+
+
+                        <a
+                            href="#actividades"
+                            class="btn secondary"
+                        >
+                            Ver actividades
+                        </a>
+
+                    </div>
+
+                </div>
+
+
+
+                <aside class="hero-card">
+
+                    <small>
+                        PERÍODO ACADÉMICO
+                    </small>
+
+
+                    <strong>
+                        Mi espacio de aprendizaje
+                    </strong>
+
+
+                    <p>
+                        Un recorrido digital donde cada semana
+                        representa una nueva etapa del ciclo.
+                    </p>
+
+
+                    <div class="hero-card__stats">
+
+                        <div>
+
+                            <b>
+                                16
+                            </b>
+
+                            <span>
+                                Semanas
+                            </span>
+
+                        </div>
+
+
+                        <div>
+
+                            <b>
+                                ${activities.length}
+                            </b>
+
+                            <span>
+                                Actividades
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </aside>
+
+            </div>
+
+        </section>
+
+
+
+        <section class="section">
+
+            <div class="wrap">
+
+
+                <div class="section-head">
+
+                    <div>
+
+                        <span class="eyebrow">
+                            Explora mi repositorio
+                        </span>
+
+                        <h2>
+                            Todo mi ciclo
+                            en un solo lugar
+                        </h2>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="quick-grid">
+
+
+                    <a
+                        class="quick-card"
+                        href="#semanas"
+                    >
+
+                        <strong>
+                            Mi recorrido académico
+                        </strong>
+
+                        <p>
+                            Explora las 16 semanas como un
+                            recorrido visual durante el ciclo.
+                        </p>
+
+                        <span class="link-arrow">
+                            Comenzar recorrido →
+                        </span>
+
+                    </a>
+
+
+
+                    <a
+                        class="quick-card"
+                        href="#actividades"
+                    >
+
+                        <strong>
+                            Actividades
+                        </strong>
+
+                        <p>
+                            Consulta trabajos, prácticas y
+                            actividades registradas.
+                        </p>
+
+                        <span class="link-arrow">
+                            Ver actividades →
+                        </span>
+
+                    </a>
+
+
+
+                    <a
+                        class="quick-card"
+                        href="#perfil"
+                    >
+
+                        <strong>
+                            Perfil académico
+                        </strong>
+
+                        <p>
+                            Conoce la información general
+                            del estudiante y del repositorio.
+                        </p>
+
+                        <span class="link-arrow">
+                            Ver perfil →
+                        </span>
+
+                    </a>
+
+
+                    ${
+                        session
+                            ? `
+
+                            <a
+                                class="quick-card"
+                                href="#administrar"
+                            >
+
+                                <strong>
+                                    Administrar contenido
+                                </strong>
+
+                                <p>
+                                    Agrega, edita y elimina
+                                    archivos de tus semanas.
+                                </p>
+
+                                <span class="link-arrow">
+                                    Administrar →
+                                </span>
+
+                            </a>
+
+                            `
+                            : ""
+                    }
+
+                </div>
+
+            </div>
+
+        </section>
+
+    `;
+
+}
+
+
+// =====================================================
+// RECORRIDO DE 16 SEMANAS
+// =====================================================
+
+function renderWeeks() {
+
+    const completedWeeks =
+        new Set(
+            activities
+                .filter(
+                    (activity) =>
+                        activity.status === "done"
+                )
+                .map(
+                    (activity) =>
+                        activity.week
+                )
+        );
+
+
+    const completedCount =
+        completedWeeks.size;
+
+
+    const progress =
+        Math.round(
+            (
+                completedCount /
+                weeks.length
+            ) * 100
+        );
+
+
+    const journeyWeeks =
+        weeks
+            .map(
+                (week, index) => {
+
+                    const completed =
+                        completedWeeks.has(
+                            week.id
+                        );
+
+
+                    const activityCount =
+                        activities.filter(
+                            (activity) =>
+                                activity.week === week.id
+                        ).length;
+
+
+                    return `
+
+                        <a
+                            href="#semana/${week.id}"
+                            class="journey-week ${completed ? "completed" : ""}"
+                            style="--week-index:${index}"
+                        >
+
+
+                            <div class="journey-node">
+
+                                <span class="journey-status">
+
+                                    ${
+                                        completed
+                                            ? "✓"
+                                            : String(
+                                                week.id
+                                            ).padStart(
+                                                2,
+                                                "0"
+                                            )
+                                    }
+
+                                </span>
+
+
+                                <span
+                                    class="journey-pulse"
+                                ></span>
+
+                            </div>
+
+
+
+                            <div class="journey-info">
+
+                                <span class="journey-label">
+                                    SEMANA
+                                </span>
+
+
+                                <strong>
+                                    ${String(
+                                        week.id
+                                    ).padStart(
+                                        2,
+                                        "0"
+                                    )}
+                                </strong>
+
+
+                                <small>
+
+                                    ${
+                                        activityCount > 0
+
+                                            ? `${activityCount} ${
+                                                activityCount === 1
+                                                    ? "actividad"
+                                                    : "actividades"
+                                            }`
+
+                                            : "Material académico"
+                                    }
+
+                                </small>
+
+                            </div>
+
+                        </a>
+
+                    `;
+
+                }
+            )
+            .join("");
+
+
+
+    app.innerHTML = `
+
+
+        <section class="academic-journey-hero">
+
+            <div class="wrap journey-hero-grid">
+
+
+                <div class="journey-hero-copy">
+
+                    <span class="journey-kicker">
+                        MI RECORRIDO ACADÉMICO
+                    </span>
+
+
+                    <h1>
+
+                        Un ciclo.
+
+                        <span>
+                            16 etapas.
+                        </span>
+
+                    </h1>
+
+
+                    <p>
+                        Explora mi avance académico semana por semana.
+                        Cada etapa reúne actividades, materiales,
+                        trabajos y evidencias desarrolladas
+                        durante el ciclo.
+                    </p>
+
+
+
+                    <div class="journey-summary">
+
+
+                        <div>
+
+                            <strong>
+                                ${weeks.length}
+                            </strong>
+
+                            <span>
+                                Semanas
+                            </span>
+
+                        </div>
+
+
+                        <div>
+
+                            <strong>
+                                ${activities.length}
+                            </strong>
+
+                            <span>
+                                Actividades
+                            </span>
+
+                        </div>
+
+
+                        <div>
+
+                            <strong>
+                                ${completedCount}
+                            </strong>
+
+                            <span>
+                                Completadas
+                            </span>
+
+                        </div>
+
+
+                    </div>
+
+                </div>
+
+
+
+                <aside class="journey-progress-card">
+
+
+                    <span class="progress-mini-title">
+                        PROGRESO DEL CICLO
+                    </span>
+
+
+                    <div class="progress-number">
+
+                        ${progress}
+
+                        <small>
+                            %
+                        </small>
+
+                    </div>
+
+
+
+                    <div class="progress-track">
+
+                        <div
+                            class="progress-fill"
+                            style="width:${progress}%"
+                        ></div>
+
+                    </div>
+
+
+
+                    <p>
+                        ${completedCount} de
+                        ${weeks.length} semanas
+                        registradas como completadas.
+                    </p>
+
+
+
+                    ${
+                        session
+
+                            ? `
+
+                                <a
+                                    href="#administrar"
+                                    class="journey-admin-link"
+                                >
+                                    Administrar contenido →
+                                </a>
+
+                            `
+
+                            : `
+
+                                <span class="journey-public-state">
+                                    Modo público
+                                </span>
+
+                            `
+                    }
+
+
+                </aside>
+
+            </div>
+
+        </section>
+
+
+
+        <section class="journey-section">
+
+            <div class="wrap">
+
+
+                <div class="journey-heading">
+
+
+                    <div>
+
+                        <span class="journey-kicker dark">
+                            MAPA DEL SEMESTRE
+                        </span>
+
+
+                        <h2>
+                            Mi camino durante
+                            el ciclo
+                        </h2>
+
+                    </div>
+
+
+
+                    <p>
+                        Selecciona cualquier semana para
+                        consultar los archivos y materiales
+                        académicos almacenados en ella.
+                    </p>
+
+
+                </div>
+
+
+
+                <div class="journey-board">
+
+
+                    <div class="journey-start">
+
+                        <span>
+                            INICIO
+                        </span>
+
+                        <strong>
+                            Comienza el recorrido
+                        </strong>
+
+                    </div>
+
+
+
+                    <div class="journey-path">
+
+                        ${journeyWeeks}
+
+                    </div>
+
+
+
+                    <div class="journey-finish">
+
+
+                        <div>
+
+                            <span>
+                                META
+                            </span>
+
+                            <strong>
+                                Fin del ciclo
+                            </strong>
+
+                        </div>
+
+
+                        <div class="finish-symbol">
+                            ✓
+                        </div>
+
+
+                    </div>
+
+
+                </div>
+
+
+
+                <div class="journey-help">
+
+
+                    <div class="help-number">
+                        ?
+                    </div>
+
+
+                    <div>
+
+                        <strong>
+                            ¿Cómo funciona?
+                        </strong>
+
+                        <p>
+                            Presiona una semana para abrir
+                            sus materiales, trabajos y archivos.
+                            Las semanas marcadas con ✓ contienen
+                            actividades completadas.
+                        </p>
+
+                    </div>
+
+
+                </div>
+
+
+            </div>
+
+        </section>
+
+    `;
+
+}
+
+
+// =====================================================
+// DETALLE DE SEMANA
+// =====================================================
+
+async function renderWeek(id) {
+
+    const week =
+        weeks.find(
+            (item) =>
+                item.id === id
+        ) ||
+        weeks[0];
+
+
+    app.innerHTML =
+        page(
+
+            week.title,
+
+            `Materiales y archivos correspondientes a la semana ${week.id}.`,
+
+            `
+
+            <div class="section-head">
+
+
+                <div>
+
+                    <span class="eyebrow">
+                        Material académico
+                    </span>
+
+                    <h2>
+                        Archivos disponibles
+                    </h2>
+
+                </div>
+
+
+                ${
+                    session
+
+                        ? `
+
+                        <button
+                            class="btn primary"
+                            id="addWeekFileBtn"
+                        >
+                            Agregar archivo
+                        </button>
+
+                        `
+
+                        : ""
+                }
+
+
+            </div>
+
+
+
+            <div class="panel">
+
+                <div id="weekFiles">
+                    Cargando archivos...
+                </div>
+
+            </div>
+
+            `
+        );
+
+
+    const addButton =
+        document.getElementById(
+            "addWeekFileBtn"
+        );
+
+
+    if (addButton) {
+
+        addButton.addEventListener(
+            "click",
+            () => {
+
+                sessionStorage.setItem(
+                    "selectedWeek",
+                    String(week.id)
+                );
+
+                location.hash =
+                    "#administrar";
+
+            }
+        );
+
     }
 
-    .top-strip__inner {
 
-        min-height: 42px;
+    const box =
+        document.getElementById(
+            "weekFiles"
+        );
+
+
+    if (!box) {
+        return;
     }
 
-    .top-strip__inner > span {
-        display: none;
+
+    if (!sb) {
+
+        box.innerHTML = `
+
+            <div class="activity-row">
+
+                <div>
+
+                    <strong>
+                        Supabase aún no está configurado
+                    </strong>
+
+                    <span>
+                        Configura la conexión para
+                        visualizar los archivos.
+                    </span>
+
+                </div>
+
+            </div>
+
+        `;
+
+        return;
     }
 
-    .top-actions {
 
-        width: 100%;
+    try {
 
-        justify-content:
-            space-between;
-    }
+        const { data, error } =
+            await sb
+                .from("repository_files")
+                .select("*")
+                .eq(
+                    "week",
+                    week.id
+                )
+                .order(
+                    "created_at",
+                    {
+                        ascending: false
+                    }
+                );
 
-    .site-header__inner {
 
-        min-height: 68px;
-    }
+        if (error) {
+            throw error;
+        }
 
-    .brand span {
-        display: none;
-    }
 
-    .menu-toggle {
-        display: block;
-    }
+        if (
+            !data ||
+            data.length === 0
+        ) {
 
-    .main-nav {
+            box.innerHTML = `
 
-        position: absolute;
+                <div class="activity-row">
 
-        display: none;
+                    <div>
 
-        top: calc(100% + 8px);
+                        <strong>
+                            No hay archivos
+                            en esta semana
+                        </strong>
 
-        left: 13px;
-        right: 13px;
+                        <span>
 
-        padding: 9px;
+                            ${
+                                session
 
-        border-radius: 17px;
+                                    ? "Puedes agregar el primer archivo utilizando el botón superior."
 
-        background: white;
+                                    : "Todavía no se ha publicado material para esta semana."
+                            }
 
-        box-shadow:
-            var(--shadow);
-    }
+                        </span>
 
-    .main-nav.open {
+                    </div>
 
-        display: grid;
-    }
+                </div>
 
-    .main-nav a {
+            `;
 
-        padding:
-            13px 14px;
-    }
+            return;
+        }
 
-    .hero {
 
-        padding:
-            70px 0;
-    }
+        box.innerHTML = `
 
-    .hero h1 {
+            <div class="file-list">
 
-        font-size:
-            clamp(43px,14vw,65px);
-    }
+                ${
+                    data
+                        .map(
+                            (file) => `
 
-    .section {
+                            <div class="file-row">
 
-        padding:
-            60px 0;
-    }
 
-    .quick-grid,
-    .week-grid {
+                                <div>
 
-        grid-template-columns:
-            1fr;
-    }
+                                    <strong>
+                                        ${escapeHtml(
+                                            file.file_name
+                                        )}
+                                    </strong>
 
-    .section-head,
-    .journey-heading {
+                                    <span>
 
-        align-items:
-            flex-start;
+                                        ${escapeHtml(
+                                            file.description ||
+                                            "Archivo académico"
+                                        )}
 
-        flex-direction:
-            column;
+                                    </span>
 
-        gap: 18px;
-    }
+                                </div>
 
-    .academic-journey-hero {
 
-        padding:
-            70px 0 65px;
-    }
 
-    .journey-hero-copy h1 {
+                                <div class="week-actions">
 
-        font-size:
-            clamp(45px,14vw,65px);
-    }
 
-    .journey-summary {
+                                    <a
+                                        class="small-btn primary"
+                                        href="${attr(
+                                            file.public_url
+                                        )}"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                    >
+                                        Abrir
+                                    </a>
 
-        display: grid;
 
-        grid-template-columns:
-            repeat(3,1fr);
+                                    ${
+                                        session &&
+                                        file.user_id ===
+                                            session.user.id
 
-        gap: 6px;
-    }
+                                            ? `
 
-    .journey-summary div {
+                                            <button
+                                                type="button"
+                                                class="small-btn"
+                                                onclick="openEditFile('${file.id}')"
+                                            >
+                                                Editar
+                                            </button>
 
-        min-width: 0;
+                                            `
 
-        padding:
-            13px 9px;
-    }
+                                            : ""
+                                    }
 
-    .journey-summary strong {
 
-        font-size: 21px;
-    }
+                                </div>
 
-    .journey-summary span {
 
-        font-size: 9px;
-    }
+                            </div>
 
-    .progress-number {
+                            `
+                        )
+                        .join("")
+                }
 
-        font-size: 60px;
-    }
+            </div>
 
-    .journey-section {
+        `;
 
-        padding:
-            65px 0 80px;
-    }
 
-    .journey-board {
+    } catch (error) {
 
-        padding:
-            25px 14px;
-    }
+        console.error(error);
 
-    .journey-path {
 
-        grid-template-columns:
-            1fr 1fr;
+        box.innerHTML = `
 
-        gap:
-            12px 5px;
+            <div class="activity-row">
 
-        padding:
-            5px 0 15px;
-    }
+                <div>
 
-    .journey-week {
+                    <strong>
+                        No se pudieron cargar
+                        los archivos
+                    </strong>
 
-        min-height: 150px;
+                    <span>
+                        ${escapeHtml(
+                            error.message
+                        )}
+                    </span>
 
-        padding:
-            12px 4px;
-    }
+                </div>
 
-    .journey-node {
+            </div>
 
-        width: 58px;
-        height: 58px;
-    }
+        `;
 
-    .journey-info strong {
-
-        font-size: 11px;
-    }
-
-    .journey-info small {
-
-        font-size: 9px;
-    }
-
-    .journey-finish {
-
-        justify-content:
-            flex-start;
-    }
-
-    .journey-help {
-
-        align-items:
-            flex-start;
-    }
-
-    .profile-card {
-
-        grid-template-columns:
-            1fr;
-
-        gap: 25px;
-
-        padding: 25px;
-    }
-
-    .profile-avatar {
-
-        width: 130px;
-        height: 130px;
-    }
-
-    .info-grid {
-
-        grid-template-columns:
-            1fr;
-    }
-
-    .activity-row,
-    .file-row {
-
-        align-items:
-            flex-start;
-
-        flex-direction:
-            column;
-    }
-
-    .site-footer {
-
-        flex-direction:
-            column;
-    }
-
-    .site-footer p {
-
-        text-align: left;
     }
 
 }
 
 
-/* =========================================================
-   SMALL MOBILE
-   ========================================================= */
+// =====================================================
+// ACTIVIDADES
+// =====================================================
 
-@media (max-width: 430px) {
+function renderActivities() {
 
-    .journey-path {
+    app.innerHTML =
+        page(
 
-        grid-template-columns:
-            1fr;
+            "Actividades",
+
+            "Trabajos, prácticas y actividades registradas en el repositorio.",
+
+            `
+
+            <div class="activity-list">
+
+                ${
+                    activities
+                        .map(
+                            (activity) => `
+
+                            <article class="activity-row">
+
+
+                                <div>
+
+                                    <strong>
+                                        ${escapeHtml(
+                                            activity.title
+                                        )}
+                                    </strong>
+
+                                    <span>
+
+                                        Semana
+                                        ${activity.week}
+
+                                        ·
+
+                                        ${escapeHtml(
+                                            activity.type
+                                        )}
+
+                                    </span>
+
+                                </div>
+
+
+
+                                <span
+                                    class="badge ${activity.status}"
+                                >
+
+                                    ${
+                                        activity.status ===
+                                        "done"
+
+                                            ? "Completado"
+
+                                            : "Pendiente"
+                                    }
+
+                                </span>
+
+
+                            </article>
+
+                            `
+                        )
+                        .join("")
+                }
+
+            </div>
+
+            `
+        );
+
+}
+
+
+// =====================================================
+// FOTO DE PERFIL
+// =====================================================
+
+function profilePicture() {
+
+    if (profile?.avatar_url) {
+
+        return `
+
+            <img
+                class="profile-avatar"
+                src="${attr(
+                    profile.avatar_url
+                )}"
+                alt="Foto de perfil"
+            >
+
+        `;
+
     }
 
-    .journey-week {
 
-        min-height: auto;
+    const name =
+        profile?.full_name ||
+        "Antony Daniel";
 
-        flex-direction: row;
 
-        justify-content:
-            flex-start;
+    const initials =
+        name
+            .split(" ")
+            .filter(Boolean)
+            .slice(0, 2)
+            .map(
+                (word) =>
+                    word[0] || ""
+            )
+            .join("")
+            .toUpperCase();
 
-        text-align: left;
 
-        gap: 15px;
+    return `
 
-        padding:
-            13px;
+        <div class="profile-avatar fallback">
+            ${escapeHtml(initials)}
+        </div>
+
+    `;
+
+}
+
+
+// =====================================================
+// PERFIL
+// =====================================================
+
+function renderProfile() {
+
+    const name =
+        profile?.full_name ||
+        "Antony Daniel Leiva Cárdenas";
+
+
+    const career =
+        profile?.career ||
+        "Ingeniería de Sistemas y Computación";
+
+
+    const bio =
+        profile?.bio ||
+        "Repositorio académico personal para organizar trabajos, evidencias y materiales del ciclo.";
+
+
+    app.innerHTML =
+        page(
+
+            "Perfil académico",
+
+            "Información general del estudiante.",
+
+            `
+
+            <div class="profile-card">
+
+
+                ${profilePicture()}
+
+
+
+                <div>
+
+
+                    <span class="eyebrow">
+                        Estudiante
+                    </span>
+
+
+                    <h2>
+                        ${escapeHtml(name)}
+                    </h2>
+
+
+                    <p>
+                        ${escapeHtml(bio)}
+                    </p>
+
+
+
+                    <div class="info-grid">
+
+
+                        <div>
+
+                            <span>
+                                Universidad
+                            </span>
+
+                            <strong>
+                                Universidad Peruana
+                                Los Andes
+                            </strong>
+
+                        </div>
+
+
+
+                        <div>
+
+                            <span>
+                                Carrera
+                            </span>
+
+                            <strong>
+                                ${escapeHtml(career)}
+                            </strong>
+
+                        </div>
+
+
+
+                        <div>
+
+                            <span>
+                                Organización
+                            </span>
+
+                            <strong>
+                                16 semanas
+                            </strong>
+
+                        </div>
+
+
+
+                        <div>
+
+                            <span>
+                                Estado
+                            </span>
+
+                            <strong>
+
+                                ${
+                                    session
+                                        ? "Sesión iniciada"
+                                        : "Perfil público"
+                                }
+
+                            </strong>
+
+                        </div>
+
+
+                    </div>
+
+
+
+                    ${
+                        session
+
+                            ? `
+
+                            <div
+                                class="hero__actions"
+                                style="margin-top:20px"
+                            >
+
+                                <a
+                                    class="btn primary"
+                                    href="#administrar"
+                                >
+                                    Editar perfil
+                                </a>
+
+                            </div>
+
+                            `
+
+                            : ""
+                    }
+
+
+                </div>
+
+
+            </div>
+
+            `
+        );
+
+}
+
+
+// =====================================================
+// ADMINISTRAR
+// =====================================================
+
+function renderAdmin() {
+
+    if (!session) {
+
+        app.innerHTML =
+            page(
+
+                "Administrar",
+
+                "Acceso exclusivo para el administrador del repositorio.",
+
+                `
+
+                <div class="panel">
+
+                    <h2>
+                        Inicia sesión
+                    </h2>
+
+                    <p>
+                        Debes iniciar sesión para editar
+                        tu perfil y administrar archivos.
+                    </p>
+
+                    <button
+                        class="btn primary"
+                        id="adminLoginBtn"
+                    >
+                        Iniciar sesión
+                    </button>
+
+                </div>
+
+                `
+            );
+
+
+        const button =
+            document.getElementById(
+                "adminLoginBtn"
+            );
+
+
+        if (
+            button &&
+            authModal
+        ) {
+
+            button.addEventListener(
+                "click",
+                () => {
+                    authModal.classList.add(
+                        "open"
+                    );
+                }
+            );
+
+        }
+
+
+        return;
     }
 
-    .journey-info {
 
-        margin-top: 0;
+    const selectedWeek =
+        Number(
+            sessionStorage.getItem(
+                "selectedWeek"
+            )
+        ) || 1;
+
+
+    sessionStorage.removeItem(
+        "selectedWeek"
+    );
+
+
+    app.innerHTML =
+        page(
+
+            "Administrar contenido",
+
+            "Edita tu perfil y administra los archivos del repositorio.",
+
+            `
+
+            <div class="admin-grid">
+
+
+                <section class="panel">
+
+
+                    <span class="eyebrow">
+                        Perfil
+                    </span>
+
+
+                    <h2>
+                        Editar información
+                    </h2>
+
+
+
+                    <form
+                        id="profileForm"
+                        class="form-stack"
+                    >
+
+
+                        <label>
+
+                            Nombre completo
+
+                            <input
+                                id="fullName"
+                                type="text"
+                                value="${attr(
+                                    profile?.full_name ||
+                                    ""
+                                )}"
+                                placeholder="Escribe tu nombre completo"
+                            >
+
+                        </label>
+
+
+
+                        <label>
+
+                            Carrera
+
+                            <input
+                                id="career"
+                                type="text"
+                                value="${attr(
+                                    profile?.career ||
+                                    "Ingeniería de Sistemas y Computación"
+                                )}"
+                            >
+
+                        </label>
+
+
+
+                        <label>
+
+                            Descripción
+
+                            <textarea
+                                id="bio"
+                                rows="5"
+                                placeholder="Escribe una breve descripción"
+                            >${escapeHtml(
+                                profile?.bio ||
+                                ""
+                            )}</textarea>
+
+                        </label>
+
+
+
+                        <label>
+
+                            Foto de perfil
+
+                            <input
+                                id="avatarFile"
+                                type="file"
+                                accept="image/*"
+                            >
+
+                        </label>
+
+
+
+                        <button
+                            class="btn primary"
+                            type="submit"
+                        >
+                            Guardar cambios
+                        </button>
+
+
+                        <p
+                            id="profileMsg"
+                            class="form-message"
+                        ></p>
+
+
+                    </form>
+
+
+                </section>
+
+
+
+                <section class="panel">
+
+
+                    <span class="eyebrow">
+                        Repositorio
+                    </span>
+
+
+                    <h2>
+                        Agregar archivo
+                    </h2>
+
+
+
+                    <form
+                        id="uploadForm"
+                        class="form-stack"
+                    >
+
+
+                        <label>
+
+                            Semana
+
+                            <select id="weekSelect">
+
+                                ${
+                                    weeks
+                                        .map(
+                                            (week) => `
+
+                                            <option
+                                                value="${week.id}"
+                                                ${
+                                                    week.id ===
+                                                    selectedWeek
+
+                                                        ? "selected"
+
+                                                        : ""
+                                                }
+                                            >
+                                                ${week.title}
+                                            </option>
+
+                                            `
+                                        )
+                                        .join("")
+                                }
+
+                            </select>
+
+                        </label>
+
+
+
+                        <label>
+
+                            Descripción
+
+                            <input
+                                id="fileDescription"
+                                type="text"
+                                placeholder="Ej. Práctica de redes"
+                            >
+
+                        </label>
+
+
+
+                        <label>
+
+                            Seleccionar archivo
+
+                            <input
+                                id="repoFile"
+                                type="file"
+                                required
+                            >
+
+                        </label>
+
+
+
+                        <button
+                            class="btn primary"
+                            type="submit"
+                        >
+                            Subir archivo
+                        </button>
+
+
+                        <p
+                            id="uploadMsg"
+                            class="form-message"
+                        ></p>
+
+
+                    </form>
+
+
+                </section>
+
+
+            </div>
+
+
+
+            <section
+                class="panel"
+                style="margin-top:20px"
+            >
+
+
+                <div class="section-head">
+
+                    <div>
+
+                        <span class="eyebrow">
+                            Gestión de archivos
+                        </span>
+
+                        <h2>
+                            Mis archivos
+                        </h2>
+
+                    </div>
+
+                </div>
+
+
+                <div id="adminFiles">
+                    Cargando archivos...
+                </div>
+
+
+            </section>
+
+
+
+            <div
+                id="editFileModal"
+                class="modal"
+            >
+
+
+                <div class="modal-card">
+
+
+                    <div class="modal-head">
+
+
+                        <div>
+
+                            <span class="eyebrow">
+                                Archivo
+                            </span>
+
+                            <h2>
+                                Editar archivo
+                            </h2>
+
+                        </div>
+
+
+                        <button
+                            type="button"
+                            class="close-btn"
+                            id="closeEditFile"
+                        >
+                            Cerrar
+                        </button>
+
+
+                    </div>
+
+
+
+                    <form
+                        id="editFileForm"
+                        class="form-stack"
+                    >
+
+
+                        <input
+                            type="hidden"
+                            id="editFileId"
+                        >
+
+
+
+                        <label>
+
+                            Nombre del archivo
+
+                            <input
+                                id="editFileName"
+                                type="text"
+                                disabled
+                            >
+
+                        </label>
+
+
+
+                        <label>
+
+                            Semana
+
+                            <select id="editFileWeek">
+
+                                ${
+                                    weeks
+                                        .map(
+                                            (week) => `
+
+                                            <option
+                                                value="${week.id}"
+                                            >
+                                                ${week.title}
+                                            </option>
+
+                                            `
+                                        )
+                                        .join("")
+                                }
+
+                            </select>
+
+                        </label>
+
+
+
+                        <label>
+
+                            Descripción
+
+                            <input
+                                id="editFileDescription"
+                                type="text"
+                                placeholder="Descripción del archivo"
+                            >
+
+                        </label>
+
+
+
+                        <button
+                            class="btn primary"
+                            type="submit"
+                        >
+                            Guardar cambios
+                        </button>
+
+
+                        <p
+                            id="editFileMsg"
+                            class="form-message"
+                        ></p>
+
+
+                    </form>
+
+
+                </div>
+
+
+            </div>
+
+            `
+        );
+
+
+    const profileForm =
+        document.getElementById(
+            "profileForm"
+        );
+
+
+    const uploadForm =
+        document.getElementById(
+            "uploadForm"
+        );
+
+
+    const editFileForm =
+        document.getElementById(
+            "editFileForm"
+        );
+
+
+    const closeEditFile =
+        document.getElementById(
+            "closeEditFile"
+        );
+
+
+    const editModal =
+        document.getElementById(
+            "editFileModal"
+        );
+
+
+    if (profileForm) {
+
+        profileForm.addEventListener(
+            "submit",
+            saveProfile
+        );
+
     }
 
-    .journey-summary {
 
-        grid-template-columns:
-            1fr 1fr 1fr;
+    if (uploadForm) {
+
+        uploadForm.addEventListener(
+            "submit",
+            uploadFile
+        );
+
     }
 
-    .hero-card__stats {
 
-        grid-template-columns:
-            1fr;
+    if (editFileForm) {
+
+        editFileForm.addEventListener(
+            "submit",
+            saveFileChanges
+        );
+
+    }
+
+
+    if (
+        closeEditFile &&
+        editModal
+    ) {
+
+        closeEditFile.addEventListener(
+            "click",
+            () => {
+
+                editModal.classList.remove(
+                    "open"
+                );
+
+            }
+        );
+
+    }
+
+
+    if (editModal) {
+
+        editModal.addEventListener(
+            "click",
+            (event) => {
+
+                if (
+                    event.target ===
+                    editModal
+                ) {
+
+                    editModal.classList.remove(
+                        "open"
+                    );
+
+                }
+
+            }
+        );
+
+    }
+
+
+    loadAdminFiles();
+
+}
+
+
+// =====================================================
+// GUARDAR PERFIL
+// =====================================================
+
+async function saveProfile(event) {
+
+    event.preventDefault();
+
+
+    if (
+        !sb ||
+        !session
+    ) {
+        return;
+    }
+
+
+    const msg =
+        document.getElementById(
+            "profileMsg"
+        );
+
+
+    if (msg) {
+        msg.textContent =
+            "Guardando cambios...";
+    }
+
+
+    try {
+
+        let avatarUrl =
+            profile?.avatar_url ||
+            null;
+
+
+        const avatarInput =
+            document.getElementById(
+                "avatarFile"
+            );
+
+
+        const avatar =
+            avatarInput?.files?.[0];
+
+
+        if (avatar) {
+
+            const extension =
+                avatar.name
+                    .split(".")
+                    .pop();
+
+
+            const path =
+                `${session.user.id}/avatar.${extension}`;
+
+
+            const {
+                error: uploadError
+            } =
+                await sb.storage
+                    .from("avatars")
+                    .upload(
+                        path,
+                        avatar,
+                        {
+                            upsert: true
+                        }
+                    );
+
+
+            if (uploadError) {
+                throw uploadError;
+            }
+
+
+            const { data: urlData } =
+                sb.storage
+                    .from("avatars")
+                    .getPublicUrl(path);
+
+
+            avatarUrl =
+                `${urlData.publicUrl}?v=${Date.now()}`;
+
+        }
+
+
+        const payload = {
+
+            id:
+                session.user.id,
+
+            full_name:
+                document
+                    .getElementById(
+                        "fullName"
+                    )
+                    .value
+                    .trim(),
+
+            career:
+                document
+                    .getElementById(
+                        "career"
+                    )
+                    .value
+                    .trim(),
+
+            bio:
+                document
+                    .getElementById(
+                        "bio"
+                    )
+                    .value
+                    .trim(),
+
+            avatar_url:
+                avatarUrl,
+
+            updated_at:
+                new Date()
+                    .toISOString()
+
+        };
+
+
+        const { error } =
+            await sb
+                .from("profiles")
+                .upsert(payload);
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        await loadProfile();
+
+        updateAuthUI();
+
+
+        if (msg) {
+            msg.textContent =
+                "Perfil actualizado correctamente.";
+        }
+
+
+    } catch (error) {
+
+        console.error(error);
+
+
+        if (msg) {
+
+            msg.textContent =
+                `Error: ${error.message}`;
+
+        }
+
     }
 
 }
 
 
-/* =========================================================
-   ACCESSIBILITY
-   ========================================================= */
+// =====================================================
+// SUBIR ARCHIVO
+// =====================================================
 
-@media (prefers-reduced-motion: reduce) {
+async function uploadFile(event) {
 
-    *,
-    *::before,
-    *::after {
+    event.preventDefault();
 
-        animation-duration:
-            .01ms !important;
 
-        animation-iteration-count:
-            1 !important;
+    if (
+        !sb ||
+        !session
+    ) {
+        return;
+    }
 
-        scroll-behavior:
-            auto !important;
 
-        transition-duration:
-            .01ms !important;
+    const msg =
+        document.getElementById(
+            "uploadMsg"
+        );
+
+
+    const input =
+        document.getElementById(
+            "repoFile"
+        );
+
+
+    const file =
+        input?.files?.[0];
+
+
+    if (!file) {
+
+        if (msg) {
+            msg.textContent =
+                "Selecciona un archivo.";
+        }
+
+        return;
+    }
+
+
+    if (msg) {
+        msg.textContent =
+            "Subiendo archivo...";
+    }
+
+
+    try {
+
+        const week =
+            Number(
+                document
+                    .getElementById(
+                        "weekSelect"
+                    )
+                    .value
+            );
+
+
+        const description =
+            document
+                .getElementById(
+                    "fileDescription"
+                )
+                .value
+                .trim();
+
+
+        const safeName =
+            file.name.replace(
+                /[^a-zA-Z0-9._-]/g,
+                "_"
+            );
+
+
+        const path =
+            `${session.user.id}/semana-${week}/${Date.now()}-${safeName}`;
+
+
+        const {
+            error: uploadError
+        } =
+            await sb.storage
+                .from("repository-files")
+                .upload(
+                    path,
+                    file
+                );
+
+
+        if (uploadError) {
+            throw uploadError;
+        }
+
+
+        const { data: urlData } =
+            sb.storage
+                .from("repository-files")
+                .getPublicUrl(path);
+
+
+        const {
+            error: databaseError
+        } =
+            await sb
+                .from("repository_files")
+                .insert({
+
+                    user_id:
+                        session.user.id,
+
+                    week:
+                        week,
+
+                    file_name:
+                        file.name,
+
+                    description:
+                        description,
+
+                    storage_path:
+                        path,
+
+                    public_url:
+                        urlData.publicUrl
+
+                });
+
+
+        if (databaseError) {
+
+            await sb.storage
+                .from("repository-files")
+                .remove([path]);
+
+
+            throw databaseError;
+
+        }
+
+
+        if (msg) {
+
+            msg.textContent =
+                "Archivo agregado correctamente.";
+
+        }
+
+
+        event.target.reset();
+
+        await loadAdminFiles();
+
+
+    } catch (error) {
+
+        console.error(error);
+
+
+        if (msg) {
+
+            msg.textContent =
+                `Error: ${error.message}`;
+
+        }
+
     }
 
 }
+
+
+// =====================================================
+// CARGAR ARCHIVOS ADMIN
+// =====================================================
+
+async function loadAdminFiles() {
+
+    const box =
+        document.getElementById(
+            "adminFiles"
+        );
+
+
+    if (
+        !box ||
+        !sb ||
+        !session
+    ) {
+        return;
+    }
+
+
+    box.innerHTML =
+        "Cargando archivos...";
+
+
+    try {
+
+        const { data, error } =
+            await sb
+                .from("repository_files")
+                .select("*")
+                .eq(
+                    "user_id",
+                    session.user.id
+                )
+                .order(
+                    "created_at",
+                    {
+                        ascending: false
+                    }
+                );
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        if (
+            !data ||
+            data.length === 0
+        ) {
+
+            box.innerHTML = `
+
+                <div class="activity-row">
+
+                    <div>
+
+                        <strong>
+                            Todavía no hay archivos
+                        </strong>
+
+                        <span>
+                            Utiliza el formulario superior
+                            para agregar tu primer archivo.
+                        </span>
+
+                    </div>
+
+                </div>
+
+            `;
+
+            return;
+        }
+
+
+        box.innerHTML = `
+
+            <div class="file-list">
+
+                ${
+                    data
+                        .map(
+                            (file) => `
+
+                            <div class="file-row">
+
+
+                                <div>
+
+                                    <strong>
+                                        ${escapeHtml(
+                                            file.file_name
+                                        )}
+                                    </strong>
+
+                                    <span>
+
+                                        Semana
+                                        ${file.week}
+
+                                        ·
+
+                                        ${escapeHtml(
+                                            file.description ||
+                                            "Sin descripción"
+                                        )}
+
+                                    </span>
+
+                                </div>
+
+
+
+                                <div class="week-actions">
+
+
+                                    <a
+                                        class="small-btn"
+                                        href="${attr(
+                                            file.public_url
+                                        )}"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                    >
+                                        Abrir
+                                    </a>
+
+
+
+                                    <button
+                                        class="small-btn"
+                                        type="button"
+                                        onclick="openEditFile('${file.id}')"
+                                    >
+                                        Editar
+                                    </button>
+
+
+
+                                    <button
+                                        class="small-btn"
+                                        type="button"
+                                        onclick="deleteFile(
+                                            '${file.id}',
+                                            '${jsstr(
+                                                file.storage_path
+                                            )}'
+                                        )"
+                                    >
+                                        Eliminar
+                                    </button>
+
+
+                                </div>
+
+
+                            </div>
+
+                            `
+                        )
+                        .join("")
+                }
+
+            </div>
+
+        `;
+
+
+    } catch (error) {
+
+        console.error(error);
+
+
+        box.innerHTML = `
+
+            <div class="activity-row">
+
+                <div>
+
+                    <strong>
+                        Error al cargar
+                        los archivos
+                    </strong>
+
+                    <span>
+                        ${escapeHtml(
+                            error.message
+                        )}
+                    </span>
+
+                </div>
+
+            </div>
+
+        `;
+
+    }
+
+}
+
+
+// =====================================================
+// ABRIR EDICIÓN
+// =====================================================
+
+async function openEditFile(id) {
+
+    if (
+        !sb ||
+        !session
+    ) {
+        return;
+    }
+
+
+    try {
+
+        const { data, error } =
+            await sb
+                .from("repository_files")
+                .select("*")
+                .eq(
+                    "id",
+                    id
+                )
+                .eq(
+                    "user_id",
+                    session.user.id
+                )
+                .single();
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        const idInput =
+            document.getElementById(
+                "editFileId"
+            );
+
+
+        const nameInput =
+            document.getElementById(
+                "editFileName"
+            );
+
+
+        const weekInput =
+            document.getElementById(
+                "editFileWeek"
+            );
+
+
+        const descriptionInput =
+            document.getElementById(
+                "editFileDescription"
+            );
+
+
+        const message =
+            document.getElementById(
+                "editFileMsg"
+            );
+
+
+        const modal =
+            document.getElementById(
+                "editFileModal"
+            );
+
+
+        if (idInput) {
+            idInput.value = data.id;
+        }
+
+
+        if (nameInput) {
+            nameInput.value =
+                data.file_name;
+        }
+
+
+        if (weekInput) {
+            weekInput.value =
+                data.week;
+        }
+
+
+        if (descriptionInput) {
+
+            descriptionInput.value =
+                data.description ||
+                "";
+
+        }
+
+
+        if (message) {
+            message.textContent = "";
+        }
+
+
+        if (modal) {
+            modal.classList.add(
+                "open"
+            );
+        }
+
+
+    } catch (error) {
+
+        console.error(error);
+
+
+        alert(
+            `No se pudo abrir el archivo: ${error.message}`
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// GUARDAR CAMBIOS ARCHIVO
+// =====================================================
+
+async function saveFileChanges(event) {
+
+    event.preventDefault();
+
+
+    if (
+        !sb ||
+        !session
+    ) {
+        return;
+    }
+
+
+    const msg =
+        document.getElementById(
+            "editFileMsg"
+        );
+
+
+    if (msg) {
+        msg.textContent =
+            "Guardando cambios...";
+    }
+
+
+    const id =
+        document.getElementById(
+            "editFileId"
+        ).value;
+
+
+    const week =
+        Number(
+            document
+                .getElementById(
+                    "editFileWeek"
+                )
+                .value
+        );
+
+
+    const description =
+        document
+            .getElementById(
+                "editFileDescription"
+            )
+            .value
+            .trim();
+
+
+    try {
+
+        const { error } =
+            await sb
+                .from("repository_files")
+                .update({
+
+                    week:
+                        week,
+
+                    description:
+                        description
+
+                })
+                .eq(
+                    "id",
+                    id
+                )
+                .eq(
+                    "user_id",
+                    session.user.id
+                );
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        if (msg) {
+
+            msg.textContent =
+                "Archivo actualizado correctamente.";
+
+        }
+
+
+        await loadAdminFiles();
+
+
+        setTimeout(
+            () => {
+
+                const modal =
+                    document.getElementById(
+                        "editFileModal"
+                    );
+
+
+                if (modal) {
+
+                    modal.classList.remove(
+                        "open"
+                    );
+
+                }
+
+            },
+            500
+        );
+
+
+    } catch (error) {
+
+        console.error(error);
+
+
+        if (msg) {
+
+            msg.textContent =
+                `Error: ${error.message}`;
+
+        }
+
+    }
+
+}
+
+
+// =====================================================
+// ELIMINAR ARCHIVO
+// =====================================================
+
+async function deleteFile(
+    id,
+    path
+) {
+
+    if (
+        !sb ||
+        !session
+    ) {
+        return;
+    }
+
+
+    const confirmed =
+        confirm(
+            "¿Seguro que deseas eliminar este archivo?"
+        );
+
+
+    if (!confirmed) {
+        return;
+    }
+
+
+    try {
+
+        const {
+            error: storageError
+        } =
+            await sb.storage
+                .from("repository-files")
+                .remove([path]);
+
+
+        if (storageError) {
+            throw storageError;
+        }
+
+
+        const {
+            error: databaseError
+        } =
+            await sb
+                .from("repository_files")
+                .delete()
+                .eq(
+                    "id",
+                    id
+                )
+                .eq(
+                    "user_id",
+                    session.user.id
+                );
+
+
+        if (databaseError) {
+            throw databaseError;
+        }
+
+
+        await loadAdminFiles();
+
+
+    } catch (error) {
+
+        console.error(error);
+
+
+        alert(
+            `No se pudo eliminar el archivo: ${error.message}`
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// UTILIDADES
+// =====================================================
+
+function escapeHtml(
+    value = ""
+) {
+
+    return String(value)
+        .replace(
+            /[&<>"']/g,
+            (character) => ({
+
+                "&":
+                    "&amp;",
+
+                "<":
+                    "&lt;",
+
+                ">":
+                    "&gt;",
+
+                '"':
+                    "&quot;",
+
+                "'":
+                    "&#039;"
+
+            }[character])
+        );
+
+}
+
+
+function attr(
+    value = ""
+) {
+
+    return escapeHtml(
+        value
+    );
+
+}
+
+
+function jsstr(
+    value = ""
+) {
+
+    return String(value)
+        .replace(
+            /\\/g,
+            "\\\\"
+        )
+        .replace(
+            /'/g,
+            "\\'"
+        );
+
+}
+
+
+// =====================================================
+// PARTÍCULAS
+// =====================================================
+
+function createTechParticles() {
+
+    const container =
+        document.getElementById(
+            "techParticles"
+        );
+
+
+    if (!container) {
+        return;
+    }
+
+
+    container.innerHTML = "";
+
+
+    const total = 24;
+
+
+    for (
+        let i = 0;
+        i < total;
+        i++
+    ) {
+
+        const particle =
+            document.createElement(
+                "span"
+            );
+
+
+        particle.className =
+            "tech-particle";
+
+
+        particle.style.left =
+            Math.random() *
+            100 +
+            "%";
+
+
+        particle.style.top =
+            Math.random() *
+            100 +
+            "%";
+
+
+        particle.style.setProperty(
+            "--duration",
+            7 +
+            Math.random() *
+            8 +
+            "s"
+        );
+
+
+        particle.style.setProperty(
+            "--delay",
+            -Math.random() *
+            10 +
+            "s"
+        );
+
+
+        const size =
+            3 +
+            Math.random() *
+            5;
+
+
+        particle.style.width =
+            size +
+            "px";
+
+
+        particle.style.height =
+            size +
+            "px";
+
+
+        container.appendChild(
+            particle
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// INICIAR TODO
+// =====================================================
+
+createTechParticles();
+
+init();
