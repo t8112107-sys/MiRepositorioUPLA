@@ -1065,7 +1065,6 @@ function renderWeeks() {
                     </div>
 
 
-
                     <div class="progress-track">
 
                         <div
@@ -1076,13 +1075,11 @@ function renderWeeks() {
                     </div>
 
 
-
                     <p>
                         ${completedCount} de
                         ${weeks.length} semanas
                         registradas como completadas.
                     </p>
-
 
 
                     ${
@@ -1140,7 +1137,6 @@ function renderWeeks() {
                     </div>
 
 
-
                     <p>
                         Selecciona cualquier semana para
                         consultar los archivos y materiales
@@ -1168,13 +1164,11 @@ function renderWeeks() {
                     </div>
 
 
-
                     <div class="journey-path">
 
                         ${journeyWeeks}
 
                     </div>
-
 
 
                     <div class="journey-finish">
@@ -1195,42 +1189,36 @@ function renderWeeks() {
 
                         <div class="finish-symbol">
                             ✓
+                        </div>                        </div>
+
+                    </div>
+
+
+                    <div class="journey-help">
+
+                        <div class="help-number">
+                            ?
                         </div>
 
 
-                    </div>
+                        <div>
 
+                            <strong>
+                                ¿Cómo explorar el recorrido?
+                            </strong>
 
-                </div>
+                            <p>
+                                Haz clic en cualquier semana para
+                                revisar sus actividades, documentos
+                                y materiales académicos.
+                            </p>
 
-
-
-                <div class="journey-help">
-
-
-                    <div class="help-number">
-                        ?
-                    </div>
-
-
-                    <div>
-
-                        <strong>
-                            ¿Cómo funciona?
-                        </strong>
-
-                        <p>
-                            Presiona una semana para abrir
-                            sus materiales, trabajos y archivos.
-                            Las semanas marcadas con ✓ contienen
-                            actividades completadas.
-                        </p>
+                        </div>
 
                     </div>
 
 
                 </div>
-
 
             </div>
 
@@ -1242,7 +1230,7 @@ function renderWeeks() {
 
 
 // =====================================================
-// DETALLE DE SEMANA
+// DETALLE DE UNA SEMANA
 // =====================================================
 
 async function renderWeek(id) {
@@ -1251,93 +1239,103 @@ async function renderWeek(id) {
         weeks.find(
             (item) =>
                 item.id === id
-        ) ||
-        weeks[0];
+        );
+
+
+    if (!week) {
+
+        app.innerHTML =
+            page(
+                "Semana no encontrada",
+                "La semana seleccionada no existe.",
+                `
+
+                    <div class="panel">
+
+                        <p>
+                            Selecciona una semana válida
+                            del recorrido académico.
+                        </p>
+
+                        <br>
+
+                        <a
+                            href="#semanas"
+                            class="btn primary"
+                        >
+                            Volver al recorrido
+                        </a>
+
+                    </div>
+
+                `
+            );
+
+        return;
+    }
 
 
     app.innerHTML =
         page(
-
             week.title,
-
-            `Materiales y archivos correspondientes a la semana ${week.id}.`,
-
+            week.description,
             `
 
-            <div class="section-head">
+                <div class="panel">
+
+                    <div class="section-head">
+
+                        <div>
+
+                            <span class="eyebrow">
+                                MATERIAL ACADÉMICO
+                            </span>
+
+                            <h2>
+                                Archivos de
+                                ${week.title}
+                            </h2>
+
+                        </div>
 
 
-                <div>
-
-                    <span class="eyebrow">
-                        Material académico
-                    </span>
-
-                    <h2>
-                        Archivos disponibles
-                    </h2>
-
-                </div>
-
-
-                ${
-                    session
-
-                        ? `
-
-                        <button
-                            class="btn primary"
-                            id="addWeekFileBtn"
+                        <a
+                            href="#semanas"
+                            class="small-btn"
                         >
-                            Agregar archivo
-                        </button>
+                            Volver al recorrido
+                        </a>
 
-                        `
-
-                        : ""
-                }
+                    </div>
 
 
-            </div>
+                    <div
+                        id="weekFiles"
+                        class="file-list"
+                    >
 
+                        <div class="activity-row">
 
+                            <div>
 
-            <div class="panel">
+                                <strong>
+                                    Cargando archivos...
+                                </strong>
 
-                <div id="weekFiles">
-                    Cargando archivos...
+                                <span>
+                                    Espera un momento.
+                                </span>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
                 </div>
-
-            </div>
 
             `
         );
-
-
-    const addButton =
-        document.getElementById(
-            "addWeekFileBtn"
-        );
-
-
-    if (addButton) {
-
-        addButton.addEventListener(
-            "click",
-            () => {
-
-                sessionStorage.setItem(
-                    "selectedWeek",
-                    String(week.id)
-                );
-
-                location.hash =
-                    "#administrar";
-
-            }
-        );
-
-    }
 
 
     const box =
@@ -1360,12 +1358,12 @@ async function renderWeek(id) {
                 <div>
 
                     <strong>
-                        Supabase aún no está configurado
+                        Supabase no está configurado
                     </strong>
 
                     <span>
-                        Configura la conexión para
-                        visualizar los archivos.
+                        Configura las credenciales
+                        para visualizar los archivos.
                     </span>
 
                 </div>
@@ -1380,20 +1378,45 @@ async function renderWeek(id) {
 
     try {
 
-        const { data, error } =
-            await sb
+        let query =
+            sb
                 .from("repository_files")
                 .select("*")
                 .eq(
                     "week",
                     week.id
-                )
-                .order(
-                    "created_at",
-                    {
-                        ascending: false
-                    }
                 );
+
+
+        /*
+         * Si existe una sesión, mostramos solamente
+         * los archivos pertenecientes al usuario.
+         *
+         * Si el repositorio permite lectura pública
+         * mediante RLS, un visitante podrá visualizar
+         * los archivos públicos de la semana.
+         */
+        if (session) {
+
+            query =
+                query.eq(
+                    "user_id",
+                    session.user.id
+                );
+
+        }
+
+
+        const {
+            data,
+            error
+        } =
+            await query.order(
+                "created_at",
+                {
+                    ascending: false
+                }
+            );
 
 
         if (error) {
@@ -1413,20 +1436,14 @@ async function renderWeek(id) {
                     <div>
 
                         <strong>
-                            No hay archivos
-                            en esta semana
+                            Esta semana todavía
+                            no tiene archivos
                         </strong>
 
                         <span>
-
-                            ${
-                                session
-
-                                    ? "Puedes agregar el primer archivo utilizando el botón superior."
-
-                                    : "Todavía no se ha publicado material para esta semana."
-                            }
-
+                            Cuando agregues contenido
+                            a la Semana ${week.id},
+                            aparecerá aquí.
                         </span>
 
                     </div>
@@ -1439,93 +1456,135 @@ async function renderWeek(id) {
         }
 
 
-        box.innerHTML = `
-
-            <div class="file-list">
-
-                ${
-                    data
-                        .map(
-                            (file) => `
-
-                            <div class="file-row">
-
-
-                                <div>
-
-                                    <strong>
-                                        ${escapeHtml(
-                                            file.file_name
-                                        )}
-                                    </strong>
-
-                                    <span>
-
-                                        ${escapeHtml(
-                                            file.description ||
-                                            "Archivo académico"
-                                        )}
-
-                                    </span>
-
-                                </div>
+        /*
+         * Seguridad adicional:
+         * verificamos otra vez que solamente se
+         * rendericen archivos de la semana actual.
+         */
+        const correctFiles =
+            data.filter(
+                (file) =>
+                    Number(file.week) ===
+                    week.id
+            );
 
 
+        if (
+            correctFiles.length === 0
+        ) {
 
-                                <div class="week-actions">
+            box.innerHTML = `
+
+                <div class="activity-row">
+
+                    <div>
+
+                        <strong>
+                            No hay archivos
+                            para esta semana
+                        </strong>
+
+                        <span>
+                            Los archivos encontrados
+                            pertenecen a otra semana.
+                        </span>
+
+                    </div>
+
+                </div>
+
+            `;
+
+            return;
+        }
 
 
-                                    <a
-                                        class="small-btn primary"
-                                        href="${attr(
-                                            file.public_url
-                                        )}"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                    >
-                                        Abrir
-                                    </a>
+        box.innerHTML =
+            correctFiles
+                .map(
+                    (file) => `
+
+                        <div class="file-row">
 
 
-                                    ${
-                                        session &&
-                                        file.user_id ===
-                                            session.user.id
+                            <div>
 
-                                            ? `
+                                <strong>
+                                    ${escapeHtml(
+                                        file.file_name
+                                    )}
+                                </strong>
+
+
+                                <span>
+
+                                    Semana
+                                    ${String(
+                                        Number(file.week)
+                                    ).padStart(
+                                        2,
+                                        "0"
+                                    )}
+
+                                    ·
+
+                                    ${escapeHtml(
+                                        file.description ||
+                                        "Sin descripción"
+                                    )}
+
+                                </span>
+
+                            </div>
+
+
+                            <div class="week-actions">
+
+
+                                <a
+                                    class="small-btn primary"
+                                    href="${attr(
+                                        file.public_url
+                                    )}"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    Abrir archivo
+                                </a>
+
+
+                                ${
+                                    session
+                                        ? `
 
                                             <button
-                                                type="button"
                                                 class="small-btn"
+                                                type="button"
                                                 onclick="openEditFile('${file.id}')"
                                             >
                                                 Editar
                                             </button>
 
-                                            `
-
-                                            : ""
-                                    }
-
-
-                                </div>
+                                        `
+                                        : ""
+                                }
 
 
                             </div>
 
-                            `
-                        )
-                        .join("")
-                }
+                        </div>
 
-            </div>
-
-        `;
+                    `
+                )
+                .join("");
 
 
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            "Error al cargar archivos:",
+            error
+        );
 
 
         box.innerHTML = `
@@ -1562,74 +1621,127 @@ async function renderWeek(id) {
 
 function renderActivities() {
 
+    const rows =
+        activities
+            .slice()
+            .sort(
+                (a, b) =>
+                    a.week - b.week
+            )
+            .map(
+                (activity) => `
+
+                    <div class="activity-row">
+
+
+                        <div>
+
+                            <strong>
+                                ${escapeHtml(
+                                    activity.title
+                                )}
+                            </strong>
+
+
+                            <span>
+
+                                Semana
+                                ${String(
+                                    activity.week
+                                ).padStart(
+                                    2,
+                                    "0"
+                                )}
+
+                                ·
+
+                                ${escapeHtml(
+                                    activity.type
+                                )}
+
+                            </span>
+
+                        </div>
+
+
+                        <span
+                            class="badge ${
+                                activity.status === "done"
+                                    ? "done"
+                                    : "pending"
+                            }"
+                        >
+
+                            ${
+                                activity.status === "done"
+                                    ? "Completado"
+                                    : "Pendiente"
+                            }
+
+                        </span>
+
+                    </div>
+
+                `
+            )
+            .join("");
+
+
     app.innerHTML =
         page(
-
             "Actividades",
-
-            "Trabajos, prácticas y actividades registradas en el repositorio.",
-
+            "Trabajos, prácticas y actividades realizadas durante el ciclo.",
             `
 
-            <div class="activity-list">
-
-                ${
-                    activities
-                        .map(
-                            (activity) => `
-
-                            <article class="activity-row">
+                <div class="panel">
 
 
-                                <div>
+                    <div class="section-head">
 
-                                    <strong>
-                                        ${escapeHtml(
-                                            activity.title
-                                        )}
-                                    </strong>
+                        <div>
 
-                                    <span>
+                            <span class="eyebrow">
+                                REGISTRO ACADÉMICO
+                            </span>
 
-                                        Semana
-                                        ${activity.week}
+                            <h2>
+                                Mis actividades
+                            </h2>
 
-                                        ·
+                        </div>
 
-                                        ${escapeHtml(
-                                            activity.type
-                                        )}
+                    </div>
 
-                                    </span>
+
+                    <div class="activity-list">
+
+                        ${
+                            rows ||
+                            `
+
+                                <div class="activity-row">
+
+                                    <div>
+
+                                        <strong>
+                                            No hay actividades
+                                        </strong>
+
+                                        <span>
+                                            Todavía no se han
+                                            registrado actividades.
+                                        </span>
+
+                                    </div>
 
                                 </div>
 
-
-
-                                <span
-                                    class="badge ${activity.status}"
-                                >
-
-                                    ${
-                                        activity.status ===
-                                        "done"
-
-                                            ? "Completado"
-
-                                            : "Pendiente"
-                                    }
-
-                                </span>
-
-
-                            </article>
-
                             `
-                        )
-                        .join("")
-                }
+                        }
 
-            </div>
+                    </div>
+
+                </div>
 
             `
         );
@@ -1638,50 +1750,55 @@ function renderActivities() {
 
 
 // =====================================================
-// FOTO DE PERFIL
+// FOTO DEL PERFIL
 // =====================================================
 
 function profilePicture() {
 
-    if (profile?.avatar_url) {
+    const avatar =
+        profile?.avatar_url;
+
+
+    if (avatar) {
 
         return `
 
             <img
                 class="profile-avatar"
-                src="${attr(
-                    profile.avatar_url
-                )}"
+                src="${attr(avatar)}"
                 alt="Foto de perfil"
+                onerror="
+                    this.style.display='none';
+                    this.nextElementSibling.style.display='grid';
+                "
             >
+
+            <div
+                class="profile-avatar fallback"
+                style="display:none"
+            >
+                ${getInitials(
+                    profile?.full_name ||
+                    session?.user?.email ||
+                    "UPLA"
+                )}
+            </div>
 
         `;
 
     }
 
 
-    const name =
-        profile?.full_name ||
-        "Antony Daniel";
-
-
-    const initials =
-        name
-            .split(" ")
-            .filter(Boolean)
-            .slice(0, 2)
-            .map(
-                (word) =>
-                    word[0] || ""
-            )
-            .join("")
-            .toUpperCase();
-
-
     return `
 
         <div class="profile-avatar fallback">
-            ${escapeHtml(initials)}
+
+            ${getInitials(
+                profile?.full_name ||
+                session?.user?.email ||
+                "UPLA"
+            )}
+
         </div>
 
     `;
@@ -1695,9 +1812,9 @@ function profilePicture() {
 
 function renderProfile() {
 
-    const name =
+    const fullName =
         profile?.full_name ||
-        "Antony Daniel Leiva Cárdenas";
+        "Estudiante UPLA";
 
 
     const career =
@@ -1705,144 +1822,157 @@ function renderProfile() {
         "Ingeniería de Sistemas y Computación";
 
 
+    const university =
+        profile?.university ||
+        "Universidad Peruana Los Andes";
+
+
+    const semester =
+        profile?.semester ||
+        "Ciclo académico";
+
+
+    const code =
+        profile?.student_code ||
+        "Sin registrar";
+
+
     const bio =
         profile?.bio ||
-        "Repositorio académico personal para organizar trabajos, evidencias y materiales del ciclo.";
+        "Repositorio académico orientado a organizar y presentar las evidencias desarrolladas durante el ciclo.";
 
 
     app.innerHTML =
         page(
-
             "Perfil académico",
-
-            "Información general del estudiante.",
-
+            "Información general del estudiante y su repositorio.",
             `
 
-            <div class="profile-card">
+                <div class="profile-card">
 
 
-                ${profilePicture()}
+                    <div>
 
-
-
-                <div>
-
-
-                    <span class="eyebrow">
-                        Estudiante
-                    </span>
-
-
-                    <h2>
-                        ${escapeHtml(name)}
-                    </h2>
-
-
-                    <p>
-                        ${escapeHtml(bio)}
-                    </p>
-
-
-
-                    <div class="info-grid">
-
-
-                        <div>
-
-                            <span>
-                                Universidad
-                            </span>
-
-                            <strong>
-                                Universidad Peruana
-                                Los Andes
-                            </strong>
-
-                        </div>
-
-
-
-                        <div>
-
-                            <span>
-                                Carrera
-                            </span>
-
-                            <strong>
-                                ${escapeHtml(career)}
-                            </strong>
-
-                        </div>
-
-
-
-                        <div>
-
-                            <span>
-                                Organización
-                            </span>
-
-                            <strong>
-                                16 semanas
-                            </strong>
-
-                        </div>
-
-
-
-                        <div>
-
-                            <span>
-                                Estado
-                            </span>
-
-                            <strong>
-
-                                ${
-                                    session
-                                        ? "Sesión iniciada"
-                                        : "Perfil público"
-                                }
-
-                            </strong>
-
-                        </div>
-
+                        ${profilePicture()}
 
                     </div>
 
 
+                    <div>
 
-                    ${
-                        session
 
-                            ? `
+                        <span class="eyebrow">
+                            ESTUDIANTE
+                        </span>
 
-                            <div
-                                class="hero__actions"
-                                style="margin-top:20px"
-                            >
 
-                                <a
-                                    class="btn primary"
-                                    href="#administrar"
-                                >
-                                    Editar perfil
-                                </a>
+                        <h2>
+                            ${escapeHtml(
+                                fullName
+                            )}
+                        </h2>
+
+
+                        <p>
+                            ${escapeHtml(
+                                bio
+                            )}
+                        </p>
+
+
+                        <div class="info-grid">
+
+
+                            <div>
+
+                                <span>
+                                    Carrera
+                                </span>
+
+                                <strong>
+                                    ${escapeHtml(
+                                        career
+                                    )}
+                                </strong>
 
                             </div>
 
-                            `
 
-                            : ""
-                    }
+                            <div>
 
+                                <span>
+                                    Universidad
+                                </span>
+
+                                <strong>
+                                    ${escapeHtml(
+                                        university
+                                    )}
+                                </strong>
+
+                            </div>
+
+
+                            <div>
+
+                                <span>
+                                    Ciclo
+                                </span>
+
+                                <strong>
+                                    ${escapeHtml(
+                                        semester
+                                    )}
+                                </strong>
+
+                            </div>
+
+
+                            <div>
+
+                                <span>
+                                    Código
+                                </span>
+
+                                <strong>
+                                    ${escapeHtml(
+                                        code
+                                    )}
+                                </strong>
+
+                            </div>
+
+
+                        </div>
+
+
+                        ${
+                            session
+                                ? `
+
+                                    <div
+                                        style="
+                                            margin-top:22px;
+                                        "
+                                    >
+
+                                        <a
+                                            href="#administrar"
+                                            class="btn primary"
+                                        >
+                                            Editar desde administración
+                                        </a>
+
+                                    </div>
+
+                                `
+                                : ""
+                        }
+
+
+                    </div>
 
                 </div>
-
-
-            </div>
 
             `
         );
@@ -1851,7 +1981,7 @@ function renderProfile() {
 
 
 // =====================================================
-// ADMINISTRAR
+// ADMINISTRACIÓN
 // =====================================================
 
 function renderAdmin() {
@@ -1860,49 +1990,69 @@ function renderAdmin() {
 
         app.innerHTML =
             page(
-
-                "Administrar",
-
-                "Acceso exclusivo para el administrador del repositorio.",
-
+                "Administración",
+                "Inicia sesión para administrar el repositorio.",
                 `
 
-                <div class="panel">
+                    <div class="panel">
 
-                    <h2>
-                        Inicia sesión
-                    </h2>
+                        <div class="section-head">
 
-                    <p>
-                        Debes iniciar sesión para editar
-                        tu perfil y administrar archivos.
-                    </p>
+                            <div>
 
-                    <button
-                        class="btn primary"
-                        id="adminLoginBtn"
-                    >
-                        Iniciar sesión
-                    </button>
+                                <span class="eyebrow">
+                                    ACCESO PRIVADO
+                                </span>
 
-                </div>
+                                <h2>
+                                    Inicia sesión
+                                </h2>
+
+                            </div>
+
+                        </div>
+
+
+                        <p>
+                            Para subir, editar o eliminar
+                            archivos debes iniciar sesión.
+                        </p>
+
+
+                        <div
+                            style="
+                                margin-top:20px;
+                            "
+                        >
+
+                            <button
+                                class="btn primary"
+                                type="button"
+                                id="adminLoginButton"
+                            >
+                                Iniciar sesión
+                            </button>
+
+                        </div>
+
+                    </div>
 
                 `
             );
 
 
-        const button =
+        const adminLoginButton =
             document.getElementById(
-                "adminLoginBtn"
+                "adminLoginButton"
             );
 
 
         if (
-            button &&
+            adminLoginButton &&
             authModal
         ) {
 
-            button.addEventListener(
+            adminLoginButton.addEventListener(
                 "click",
                 () => {
                     authModal.classList.add(
@@ -1918,406 +2068,443 @@ function renderAdmin() {
     }
 
 
-    const selectedWeek =
-        Number(
-            sessionStorage.getItem(
-                "selectedWeek"
+    const weekOptions =
+        weeks
+            .map(
+                (week) => `
+
+                    <option value="${week.id}">
+                        ${week.title}
+                    </option>
+
+                `
             )
-        ) || 1;
-
-
-    sessionStorage.removeItem(
-        "selectedWeek"
-    );
+            .join("");
 
 
     app.innerHTML =
         page(
-
-            "Administrar contenido",
-
-            "Edita tu perfil y administra los archivos del repositorio.",
-
+            "Administrar",
+            "Gestiona tu perfil y organiza los archivos de cada semana.",
             `
 
-            <div class="admin-grid">
+                <div class="admin-grid">
 
 
-                <section class="panel">
+                    <div class="panel">
 
 
-                    <span class="eyebrow">
-                        Perfil
-                    </span>
+                        <div class="section-head">
 
+                            <div>
 
-                    <h2>
-                        Editar información
-                    </h2>
+                                <span class="eyebrow">
+                                    PERFIL
+                                </span>
 
+                                <h2>
+                                    Datos académicos
+                                </h2>
 
-
-                    <form
-                        id="profileForm"
-                        class="form-stack"
-                    >
-
-
-                        <label>
-
-                            Nombre completo
-
-                            <input
-                                id="fullName"
-                                type="text"
-                                value="${attr(
-                                    profile?.full_name ||
-                                    ""
-                                )}"
-                                placeholder="Escribe tu nombre completo"
-                            >
-
-                        </label>
-
-
-
-                        <label>
-
-                            Carrera
-
-                            <input
-                                id="career"
-                                type="text"
-                                value="${attr(
-                                    profile?.career ||
-                                    "Ingeniería de Sistemas y Computación"
-                                )}"
-                            >
-
-                        </label>
-
-
-
-                        <label>
-
-                            Descripción
-
-                            <textarea
-                                id="bio"
-                                rows="5"
-                                placeholder="Escribe una breve descripción"
-                            >${escapeHtml(
-                                profile?.bio ||
-                                ""
-                            )}</textarea>
-
-                        </label>
-
-
-
-                        <label>
-
-                            Foto de perfil
-
-                            <input
-                                id="avatarFile"
-                                type="file"
-                                accept="image/*"
-                            >
-
-                        </label>
-
-
-
-                        <button
-                            class="btn primary"
-                            type="submit"
-                        >
-                            Guardar cambios
-                        </button>
-
-
-                        <p
-                            id="profileMsg"
-                            class="form-message"
-                        ></p>
-
-
-                    </form>
-
-
-                </section>
-
-
-
-                <section class="panel">
-
-
-                    <span class="eyebrow">
-                        Repositorio
-                    </span>
-
-
-                    <h2>
-                        Agregar archivo
-                    </h2>
-
-
-
-                    <form
-                        id="uploadForm"
-                        class="form-stack"
-                    >
-
-
-                        <label>
-
-                            Semana
-
-                            <select id="weekSelect">
-
-                                ${
-                                    weeks
-                                        .map(
-                                            (week) => `
-
-                                            <option
-                                                value="${week.id}"
-                                                ${
-                                                    week.id ===
-                                                    selectedWeek
-
-                                                        ? "selected"
-
-                                                        : ""
-                                                }
-                                            >
-                                                ${week.title}
-                                            </option>
-
-                                            `
-                                        )
-                                        .join("")
-                                }
-
-                            </select>
-
-                        </label>
-
-
-
-                        <label>
-
-                            Descripción
-
-                            <input
-                                id="fileDescription"
-                                type="text"
-                                placeholder="Ej. Práctica de redes"
-                            >
-
-                        </label>
-
-
-
-                        <label>
-
-                            Seleccionar archivo
-
-                            <input
-                                id="repoFile"
-                                type="file"
-                                required
-                            >
-
-                        </label>
-
-
-
-                        <button
-                            class="btn primary"
-                            type="submit"
-                        >
-                            Subir archivo
-                        </button>
-
-
-                        <p
-                            id="uploadMsg"
-                            class="form-message"
-                        ></p>
-
-
-                    </form>
-
-
-                </section>
-
-
-            </div>
-
-
-
-            <section
-                class="panel"
-                style="margin-top:20px"
-            >
-
-
-                <div class="section-head">
-
-                    <div>
-
-                        <span class="eyebrow">
-                            Gestión de archivos
-                        </span>
-
-                        <h2>
-                            Mis archivos
-                        </h2>
-
-                    </div>
-
-                </div>
-
-
-                <div id="adminFiles">
-                    Cargando archivos...
-                </div>
-
-
-            </section>
-
-
-
-            <div
-                id="editFileModal"
-                class="modal"
-            >
-
-
-                <div class="modal-card">
-
-
-                    <div class="modal-head">
-
-
-                        <div>
-
-                            <span class="eyebrow">
-                                Archivo
-                            </span>
-
-                            <h2>
-                                Editar archivo
-                            </h2>
+                            </div>
 
                         </div>
 
 
-                        <button
-                            type="button"
-                            class="close-btn"
-                            id="closeEditFile"
+                        <form
+                            id="profileForm"
+                            class="form-stack"
                         >
-                            Cerrar
-                        </button>
 
+
+                            <label>
+
+                                Nombre completo
+
+                                <input
+                                    id="profileName"
+                                    type="text"
+                                    value="${attr(
+                                        profile?.full_name ||
+                                        ""
+                                    )}"
+                                    placeholder="Nombre completo"
+                                >
+
+                            </label>
+
+
+                            <label>
+
+                                Carrera
+
+                                <input
+                                    id="profileCareer"
+                                    type="text"
+                                    value="${attr(
+                                        profile?.career ||
+                                        "Ingeniería de Sistemas y Computación"
+                                    )}"
+                                    placeholder="Carrera"
+                                >
+
+                            </label>
+
+
+                            <label>
+
+                                Universidad
+
+                                <input
+                                    id="profileUniversity"
+                                    type="text"
+                                    value="${attr(
+                                        profile?.university ||
+                                        "Universidad Peruana Los Andes"
+                                    )}"
+                                    placeholder="Universidad"
+                                >
+
+                            </label>
+
+
+                            <label>
+
+                                Ciclo
+
+                                <input
+                                    id="profileSemester"
+                                    type="text"
+                                    value="${attr(
+                                        profile?.semester ||
+                                        ""
+                                    )}"
+                                    placeholder="Ejemplo: VI ciclo"
+                                >
+
+                            </label>
+
+
+                            <label>
+
+                                Código de estudiante
+
+                                <input
+                                    id="profileCode"
+                                    type="text"
+                                    value="${attr(
+                                        profile?.student_code ||
+                                        ""
+                                    )}"
+                                    placeholder="Código"
+                                >
+
+                            </label>
+
+
+                            <label>
+
+                                Descripción
+
+                                <textarea
+                                    id="profileBio"
+                                    rows="5"
+                                    placeholder="Escribe una pequeña descripción"
+                                >${escapeHtml(
+                                    profile?.bio ||
+                                    ""
+                                )}</textarea>
+
+                            </label>
+
+
+                            <label>
+
+                                URL de foto
+
+                                <input
+                                    id="profileAvatar"
+                                    type="url"
+                                    value="${attr(
+                                        profile?.avatar_url ||
+                                        ""
+                                    )}"
+                                    placeholder="https://..."
+                                >
+
+                            </label>
+
+
+                            <button
+                                class="btn primary"
+                                type="submit"
+                            >
+                                Guardar perfil
+                            </button>
+
+
+                            <div
+                                id="profileMsg"
+                                class="form-message"
+                            ></div>
+
+
+                        </form>
 
                     </div>
 
 
 
-                    <form
-                        id="editFileForm"
-                        class="form-stack"
+                    <div class="panel">
+
+
+                        <div class="section-head">
+
+                            <div>
+
+                                <span class="eyebrow">
+                                    NUEVO ARCHIVO
+                                </span>
+
+                                <h2>
+                                    Agregar material
+                                </h2>
+
+                            </div>
+
+                        </div>
+
+
+                        <form
+                            id="uploadForm"
+                            class="form-stack"
+                        >
+
+
+                            <label>
+
+                                Semana
+
+                                <select
+                                    id="weekSelect"
+                                    required
+                                >
+
+                                    ${weekOptions}
+
+                                </select>
+
+                            </label>
+
+
+                            <label>
+
+                                Descripción
+
+                                <textarea
+                                    id="fileDescription"
+                                    rows="4"
+                                    placeholder="Descripción del archivo"
+                                ></textarea>
+
+                            </label>
+
+
+                            <label>
+
+                                Archivo
+
+                                <input
+                                    id="repoFile"
+                                    type="file"
+                                    required
+                                >
+
+                            </label>
+
+
+                            <button
+                                class="btn primary"
+                                type="submit"
+                            >
+                                Subir archivo
+                            </button>
+
+
+                            <div
+                                id="uploadMsg"
+                                class="form-message"
+                            ></div>
+
+
+                        </form>
+
+                    </div>
+
+                </div>
+
+
+
+                <div
+                    class="panel"
+                    style="
+                        margin-top:18px;
+                    "
+                >
+
+
+                    <div class="section-head">
+
+                        <div>
+
+                            <span class="eyebrow">
+                                ARCHIVOS
+                            </span>
+
+                            <h2>
+                                Mis archivos por semana
+                            </h2>
+
+                        </div>
+
+                    </div>
+
+
+                    <div
+                        id="adminFiles"
+                        class="file-list"
                     >
 
+                        <div class="activity-row">
 
-                        <input
-                            type="hidden"
-                            id="editFileId"
-                        >
+                            <div>
 
+                                <strong>
+                                    Cargando archivos...
+                                </strong>
 
+                                <span>
+                                    Organizando el contenido
+                                    por semanas.
+                                </span>
 
-                        <label>
+                            </div>
 
-                            Nombre del archivo
+                        </div>
 
-                            <input
-                                id="editFileName"
-                                type="text"
-                                disabled
-                            >
-
-                        </label>
-
-
-
-                        <label>
-
-                            Semana
-
-                            <select id="editFileWeek">
-
-                                ${
-                                    weeks
-                                        .map(
-                                            (week) => `
-
-                                            <option
-                                                value="${week.id}"
-                                            >
-                                                ${week.title}
-                                            </option>
-
-                                            `
-                                        )
-                                        .join("")
-                                }
-
-                            </select>
-
-                        </label>
-
-
-
-                        <label>
-
-                            Descripción
-
-                            <input
-                                id="editFileDescription"
-                                type="text"
-                                placeholder="Descripción del archivo"
-                            >
-
-                        </label>
-
-
-
-                        <button
-                            class="btn primary"
-                            type="submit"
-                        >
-                            Guardar cambios
-                        </button>
-
-
-                        <p
-                            id="editFileMsg"
-                            class="form-message"
-                        ></p>
-
-
-                    </form>
+                    </div>
 
 
                 </div>
 
 
-            </div>
+
+                <div
+                    id="editFileModal"
+                    class="modal"
+                >
+
+                    <div class="modal-card">
+
+
+                        <div class="modal-head">
+
+                            <div>
+
+                                <span class="eyebrow">
+                                    EDITAR ARCHIVO
+                                </span>
+
+                                <h2>
+                                    Modificar información
+                                </h2>
+
+                            </div>
+
+
+                            <button
+                                id="closeEditFile"
+                                class="close-btn"
+                                type="button"
+                            >
+                                Cerrar
+                            </button>
+
+                        </div>
+
+
+                        <form
+                            id="editFileForm"
+                            class="form-stack"
+                        >
+
+
+                            <input
+                                id="editFileId"
+                                type="hidden"
+                            >
+
+
+                            <label>
+
+                                Nombre del archivo
+
+                                <input
+                                    id="editFileName"
+                                    type="text"
+                                    required
+                                >
+
+                            </label>
+
+
+                            <label>
+
+                                Semana
+
+                                <select
+                                    id="editFileWeek"
+                                    required
+                                >
+
+                                    ${weekOptions}
+
+                                </select>
+
+                            </label>
+
+
+                            <label>
+
+                                Descripción
+
+                                <textarea
+                                    id="editFileDescription"
+                                    rows="4"
+                                ></textarea>
+
+                            </label>
+
+
+                            <button
+                                class="btn primary"
+                                type="submit"
+                            >
+                                Guardar cambios
+                            </button>
+
+
+                            <div
+                                id="editFileMsg"
+                                class="form-message"
+                            ></div>
+
+
+                        </form>
+
+                    </div>
+
+                </div>
 
             `
         );
@@ -2344,12 +2531,6 @@ function renderAdmin() {
     const closeEditFile =
         document.getElementById(
             "closeEditFile"
-        );
-
-
-    const editModal =
-        document.getElementById(
-            "editFileModal"
         );
 
 
@@ -2383,23 +2564,29 @@ function renderAdmin() {
     }
 
 
-    if (
-        closeEditFile &&
-        editModal
-    ) {
+    if (closeEditFile) {
 
         closeEditFile.addEventListener(
             "click",
             () => {
 
-                editModal.classList.remove(
-                    "open"
-                );
+                document
+                    .getElementById(
+                        "editFileModal"
+                    )
+                    ?.classList
+                    .remove("open");
 
             }
         );
 
     }
+
+
+    const editModal =
+        document.getElementById(
+            "editFileModal"
+        );
 
 
     if (editModal) {
@@ -2427,10 +2614,7 @@ function renderAdmin() {
 
     loadAdminFiles();
 
-}
-
-
-// =====================================================
+}// =====================================================
 // GUARDAR PERFIL
 // =====================================================
 
@@ -2461,92 +2645,59 @@ async function saveProfile(event) {
 
     try {
 
-        let avatarUrl =
-            profile?.avatar_url ||
-            null;
+        const name =
+            document
+                .getElementById(
+                    "profileName"
+                )
+                ?.value
+                ?.trim() || "";
 
 
-        const avatarInput =
-            document.getElementById(
-                "avatarFile"
-            );
+        const career =
+            document
+                .getElementById(
+                    "profileCareer"
+                )
+                ?.value
+                ?.trim() || "";
 
 
-        const avatar =
-            avatarInput?.files?.[0];
+        const bio =
+            document
+                .getElementById(
+                    "profileBio"
+                )
+                ?.value
+                ?.trim() || "";
 
 
-        if (avatar) {
-
-            const extension =
-                avatar.name
-                    .split(".")
-                    .pop();
-
-
-            const path =
-                `${session.user.id}/avatar.${extension}`;
+        const avatarUrl =
+            document
+                .getElementById(
+                    "profileAvatar"
+                )
+                ?.value
+                ?.trim() || null;
 
 
-            const {
-                error: uploadError
-            } =
-                await sb.storage
-                    .from("avatars")
-                    .upload(
-                        path,
-                        avatar,
-                        {
-                            upsert: true
-                        }
-                    );
-
-
-            if (uploadError) {
-                throw uploadError;
-            }
-
-
-            const { data: urlData } =
-                sb.storage
-                    .from("avatars")
-                    .getPublicUrl(path);
-
-
-            avatarUrl =
-                `${urlData.publicUrl}?v=${Date.now()}`;
-
-        }
-
-
+        /*
+         * Conservamos únicamente los campos principales
+         * que utiliza la tabla profiles del proyecto.
+         */
         const payload = {
 
             id:
                 session.user.id,
 
             full_name:
-                document
-                    .getElementById(
-                        "fullName"
-                    )
-                    .value
-                    .trim(),
+                name,
 
             career:
-                document
-                    .getElementById(
-                        "career"
-                    )
-                    .value
-                    .trim(),
+                career,
 
             bio:
-                document
-                    .getElementById(
-                        "bio"
-                    )
-                    .value
-                    .trim(),
+                bio,
 
             avatar_url:
                 avatarUrl,
@@ -2561,7 +2712,9 @@ async function saveProfile(event) {
         const { error } =
             await sb
                 .from("profiles")
-                .upsert(payload);
+                .upsert(
+                    payload
+                );
 
 
         if (error) {
@@ -2575,14 +2728,19 @@ async function saveProfile(event) {
 
 
         if (msg) {
+
             msg.textContent =
                 "Perfil actualizado correctamente.";
+
         }
 
 
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            "Error al guardar perfil:",
+            error
+        );
 
 
         if (msg) {
@@ -2599,6 +2757,7 @@ async function saveProfile(event) {
 
 // =====================================================
 // SUBIR ARCHIVO
+// CORREGIDO: MANTIENE LA SEMANA SELECCIONADA
 // =====================================================
 
 async function uploadFile(event) {
@@ -2626,47 +2785,94 @@ async function uploadFile(event) {
         );
 
 
+    const weekSelect =
+        document.getElementById(
+            "weekSelect"
+        );
+
+
+    const descriptionInput =
+        document.getElementById(
+            "fileDescription"
+        );
+
+
     const file =
         input?.files?.[0];
 
 
+    // -------------------------------------------------
+    // VALIDAR ARCHIVO
+    // -------------------------------------------------
+
     if (!file) {
 
         if (msg) {
+
             msg.textContent =
                 "Selecciona un archivo.";
+
         }
 
         return;
     }
 
 
+    // -------------------------------------------------
+    // OBTENER SEMANA
+    // -------------------------------------------------
+
+    const week =
+        Number(
+            weekSelect?.value
+        );
+
+
+    /*
+     * Esta validación evita guardar accidentalmente
+     * semanas inválidas como 0, 17, NaN, etc.
+     */
+    if (
+        !Number.isInteger(week) ||
+        week < 1 ||
+        week > weeks.length
+    ) {
+
+        if (msg) {
+
+            msg.textContent =
+                "Selecciona una semana válida del 1 al 16.";
+
+        }
+
+        return;
+    }
+
+
+    const description =
+        descriptionInput
+            ?.value
+            ?.trim() || "";
+
+
     if (msg) {
+
         msg.textContent =
-            "Subiendo archivo...";
+            `Subiendo archivo a la Semana ${String(
+                week
+            ).padStart(
+                2,
+                "0"
+            )}...`;
+
     }
 
 
     try {
 
-        const week =
-            Number(
-                document
-                    .getElementById(
-                        "weekSelect"
-                    )
-                    .value
-            );
-
-
-        const description =
-            document
-                .getElementById(
-                    "fileDescription"
-                )
-                .value
-                .trim();
-
+        // -------------------------------------------------
+        // NOMBRE SEGURO
+        // -------------------------------------------------
 
         const safeName =
             file.name.replace(
@@ -2675,15 +2881,34 @@ async function uploadFile(event) {
             );
 
 
+        /*
+         * Cada archivo se guarda físicamente dentro
+         * de la carpeta correspondiente a su semana.
+         *
+         * Ejemplo:
+         *
+         * usuario/semana-05/archivo.pdf
+         */
         const path =
-            `${session.user.id}/semana-${week}/${Date.now()}-${safeName}`;
+            `${session.user.id}/semana-${String(
+                week
+            ).padStart(
+                2,
+                "0"
+            )}/${Date.now()}-${safeName}`;
 
+
+        // -------------------------------------------------
+        // SUBIR A STORAGE
+        // -------------------------------------------------
 
         const {
             error: uploadError
         } =
             await sb.storage
-                .from("repository-files")
+                .from(
+                    "repository-files"
+                )
                 .upload(
                     path,
                     file
@@ -2695,22 +2920,43 @@ async function uploadFile(event) {
         }
 
 
-        const { data: urlData } =
-            sb.storage
-                .from("repository-files")
-                .getPublicUrl(path);
+        // -------------------------------------------------
+        // OBTENER URL
+        // -------------------------------------------------
 
+        const {
+            data: urlData
+        } =
+            sb.storage
+                .from(
+                    "repository-files"
+                )
+                .getPublicUrl(
+                    path
+                );
+
+
+        // -------------------------------------------------
+        // GUARDAR EN BASE DE DATOS
+        // -------------------------------------------------
 
         const {
             error: databaseError
         } =
             await sb
-                .from("repository_files")
+                .from(
+                    "repository_files"
+                )
                 .insert({
 
                     user_id:
                         session.user.id,
 
+                    /*
+                     * IMPORTANTE:
+                     * La semana guardada en Supabase
+                     * es exactamente la seleccionada.
+                     */
                     week:
                         week,
 
@@ -2729,34 +2975,102 @@ async function uploadFile(event) {
                 });
 
 
+        /*
+         * Si falla la base de datos eliminamos
+         * el archivo que acabamos de subir.
+         *
+         * Así evitamos archivos huérfanos.
+         */
         if (databaseError) {
 
             await sb.storage
-                .from("repository-files")
-                .remove([path]);
+                .from(
+                    "repository-files"
+                )
+                .remove(
+                    [path]
+                );
 
 
             throw databaseError;
-
         }
 
+
+        // -------------------------------------------------
+        // MENSAJE DE ÉXITO
+        // -------------------------------------------------
 
         if (msg) {
 
             msg.textContent =
-                "Archivo agregado correctamente.";
+                `Archivo agregado correctamente a la Semana ${String(
+                    week
+                ).padStart(
+                    2,
+                    "0"
+                )}.`;
 
         }
 
 
-        event.target.reset();
+        /*
+         * IMPORTANTE:
+         *
+         * Antes se podía utilizar:
+         *
+         * event.target.reset();
+         *
+         * Eso reiniciaba también el selector de semana
+         * y podía hacer que regresara a Semana 01.
+         *
+         * Ahora SOLO limpiamos:
+         *
+         * - archivo
+         * - descripción
+         *
+         * La semana seleccionada se conserva.
+         */
+
+
+        if (input) {
+
+            input.value =
+                "";
+
+        }
+
+
+        if (descriptionInput) {
+
+            descriptionInput.value =
+                "";
+
+        }
+
+
+        if (weekSelect) {
+
+            weekSelect.value =
+                String(
+                    week
+                );
+
+        }
+
+
+        // -------------------------------------------------
+        // ACTUALIZAR LISTA
+        // -------------------------------------------------
 
         await loadAdminFiles();
 
 
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            "Error al subir archivo:",
+            error
+        );
 
 
         if (msg) {
@@ -2772,7 +3086,8 @@ async function uploadFile(event) {
 
 
 // =====================================================
-// CARGAR ARCHIVOS ADMIN
+// CARGAR ARCHIVOS DEL ADMINISTRADOR
+// CORREGIDO: ORDEN SEMANA 01 → SEMANA 16
 // =====================================================
 
 async function loadAdminFiles() {
@@ -2788,7 +3103,9 @@ async function loadAdminFiles() {
         !sb ||
         !session
     ) {
+
         return;
+
     }
 
 
@@ -2798,13 +3115,33 @@ async function loadAdminFiles() {
 
     try {
 
-        const { data, error } =
+        /*
+         * PRIMER ORDEN:
+         * Semana de menor a mayor.
+         *
+         * SEGUNDO ORDEN:
+         * Dentro de cada semana, archivo más
+         * reciente primero.
+         */
+
+        const {
+            data,
+            error
+        } =
             await sb
-                .from("repository_files")
+                .from(
+                    "repository_files"
+                )
                 .select("*")
                 .eq(
                     "user_id",
                     session.user.id
+                )
+                .order(
+                    "week",
+                    {
+                        ascending: true
+                    }
                 )
                 .order(
                     "created_at",
@@ -2818,6 +3155,10 @@ async function loadAdminFiles() {
             throw error;
         }
 
+
+        // -------------------------------------------------
+        // SIN ARCHIVOS
+        // -------------------------------------------------
 
         if (
             !data ||
@@ -2845,86 +3186,107 @@ async function loadAdminFiles() {
 
             `;
 
+
             return;
         }
 
 
-        box.innerHTML = `
+        // -------------------------------------------------
+        // AGRUPAR POR SEMANA
+        // -------------------------------------------------
 
-            <div class="file-list">
+        /*
+         * No dependemos únicamente del orden
+         * devuelto por Supabase.
+         *
+         * Agrupamos nosotros mismos los archivos
+         * usando las 16 semanas oficiales.
+         */
 
-                ${
-                    data
-                        .map(
-                            (file) => `
+        const groupedFiles =
+            weeks
+                .map(
+                    (week) => ({
 
-                            <div class="file-row">
+                        week:
+
+                            week,
+
+                        files:
+
+                            data.filter(
+                                (file) =>
+                                    Number(
+                                        file.week
+                                    ) ===
+                                    week.id
+                            )
+
+                    })
+                )
+                .filter(
+                    (group) =>
+                        group.files.length > 0
+                );
+
+
+        // -------------------------------------------------
+        // MOSTRAR GRUPOS
+        // -------------------------------------------------
+
+        box.innerHTML =
+            groupedFiles
+                .map(
+                    (group) => `
+
+                        <section
+                            class="admin-week-group"
+                            data-week="${group.week.id}"
+                            style="
+                                margin-bottom:24px;
+                            "
+                        >
+
+
+                            <div
+                                class="section-head"
+                                style="
+                                    margin-bottom:12px;
+                                "
+                            >
 
 
                                 <div>
 
-                                    <strong>
-                                        ${escapeHtml(
-                                            file.file_name
-                                        )}
-                                    </strong>
 
-                                    <span>
+                                    <span class="eyebrow">
 
-                                        Semana
-                                        ${file.week}
-
-                                        ·
-
-                                        ${escapeHtml(
-                                            file.description ||
-                                            "Sin descripción"
+                                        SEMANA
+                                        ${String(
+                                            group.week.id
+                                        ).padStart(
+                                            2,
+                                            "0"
                                         )}
 
                                     </span>
 
-                                </div>
 
-
-
-                                <div class="week-actions">
-
-
-                                    <a
-                                        class="small-btn"
-                                        href="${attr(
-                                            file.public_url
-                                        )}"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
+                                    <h3
+                                        style="
+                                            margin-top:6px;
+                                        "
                                     >
-                                        Abrir
-                                    </a>
 
+                                        ${group.files.length}
 
+                                        ${
+                                            group.files.length === 1
+                                                ? "archivo"
+                                                : "archivos"
+                                        }
 
-                                    <button
-                                        class="small-btn"
-                                        type="button"
-                                        onclick="openEditFile('${file.id}')"
-                                    >
-                                        Editar
-                                    </button>
-
-
-
-                                    <button
-                                        class="small-btn"
-                                        type="button"
-                                        onclick="deleteFile(
-                                            '${file.id}',
-                                            '${jsstr(
-                                                file.storage_path
-                                            )}'
-                                        )"
-                                    >
-                                        Eliminar
-                                    </button>
+                                    </h3>
 
 
                                 </div>
@@ -2932,19 +3294,126 @@ async function loadAdminFiles() {
 
                             </div>
 
-                            `
-                        )
-                        .join("")
-                }
 
-            </div>
 
-        `;
+                            <div class="file-list">
+
+
+                                ${
+                                    group.files
+                                        .map(
+                                            (file) => `
+
+
+                                                <div class="file-row">
+
+
+                                                    <div>
+
+
+                                                        <strong>
+
+                                                            ${escapeHtml(
+                                                                file.file_name
+                                                            )}
+
+                                                        </strong>
+
+
+                                                        <span>
+
+                                                            Semana
+                                                            ${String(
+                                                                Number(
+                                                                    file.week
+                                                                )
+                                                            ).padStart(
+                                                                2,
+                                                                "0"
+                                                            )}
+
+                                                            ·
+
+                                                            ${escapeHtml(
+                                                                file.description ||
+                                                                "Sin descripción"
+                                                            )}
+
+                                                        </span>
+
+
+                                                    </div>
+
+
+
+                                                    <div class="week-actions">
+
+
+                                                        <a
+                                                            class="small-btn"
+                                                            href="${attr(
+                                                                file.public_url
+                                                            )}"
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                        >
+                                                            Abrir
+                                                        </a>
+
+
+
+                                                        <button
+                                                            class="small-btn"
+                                                            type="button"
+                                                            onclick="openEditFile('${file.id}')"
+                                                        >
+                                                            Editar
+                                                        </button>
+
+
+
+                                                        <button
+                                                            class="small-btn"
+                                                            type="button"
+                                                            onclick="deleteFile(
+                                                                '${file.id}',
+                                                                '${jsstr(
+                                                                    file.storage_path
+                                                                )}'
+                                                            )"
+                                                        >
+                                                            Eliminar
+                                                        </button>
+
+
+                                                    </div>
+
+
+                                                </div>
+
+
+                                            `
+                                        )
+                                        .join("")
+                                }
+
+
+                            </div>
+
+
+                        </section>
+
+                    `
+                )
+                .join("");
 
 
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            "Error al cargar archivos:",
+            error
+        );
 
 
         box.innerHTML = `
@@ -2976,7 +3445,7 @@ async function loadAdminFiles() {
 
 
 // =====================================================
-// ABRIR EDICIÓN
+// ABRIR EDICIÓN DE ARCHIVO
 // =====================================================
 
 async function openEditFile(id) {
@@ -2985,15 +3454,22 @@ async function openEditFile(id) {
         !sb ||
         !session
     ) {
+
         return;
+
     }
 
 
     try {
 
-        const { data, error } =
+        const {
+            data,
+            error
+        } =
             await sb
-                .from("repository_files")
+                .from(
+                    "repository_files"
+                )
                 .select("*")
                 .eq(
                     "id",
@@ -3008,6 +3484,31 @@ async function openEditFile(id) {
 
         if (error) {
             throw error;
+        }
+
+
+        /*
+         * Comprobamos que el archivo tenga
+         * una semana válida.
+         */
+        const currentWeek =
+            Number(
+                data.week
+            );
+
+
+        if (
+            !Number.isInteger(
+                currentWeek
+            ) ||
+            currentWeek < 1 ||
+            currentWeek > weeks.length
+        ) {
+
+            throw new Error(
+                "El archivo tiene una semana inválida."
+            );
+
         }
 
 
@@ -3048,19 +3549,33 @@ async function openEditFile(id) {
 
 
         if (idInput) {
-            idInput.value = data.id;
+
+            idInput.value =
+                data.id;
+
         }
 
 
         if (nameInput) {
+
             nameInput.value =
                 data.file_name;
+
         }
 
 
         if (weekInput) {
+
+            /*
+             * Aquí se coloca EXACTAMENTE
+             * la semana que tiene el archivo
+             * en la base de datos.
+             */
             weekInput.value =
-                data.week;
+                String(
+                    currentWeek
+                );
+
         }
 
 
@@ -3074,20 +3589,28 @@ async function openEditFile(id) {
 
 
         if (message) {
-            message.textContent = "";
+
+            message.textContent =
+                "";
+
         }
 
 
         if (modal) {
+
             modal.classList.add(
                 "open"
             );
+
         }
 
 
     } catch (error) {
 
-        console.error(error);
+        console.error(
+            "Error al abrir archivo:",
+            error
+        );
 
 
         alert(
@@ -3097,381 +3620,3 @@ async function openEditFile(id) {
     }
 
 }
-
-
-// =====================================================
-// GUARDAR CAMBIOS ARCHIVO
-// =====================================================
-
-async function saveFileChanges(event) {
-
-    event.preventDefault();
-
-
-    if (
-        !sb ||
-        !session
-    ) {
-        return;
-    }
-
-
-    const msg =
-        document.getElementById(
-            "editFileMsg"
-        );
-
-
-    if (msg) {
-        msg.textContent =
-            "Guardando cambios...";
-    }
-
-
-    const id =
-        document.getElementById(
-            "editFileId"
-        ).value;
-
-
-    const week =
-        Number(
-            document
-                .getElementById(
-                    "editFileWeek"
-                )
-                .value
-        );
-
-
-    const description =
-        document
-            .getElementById(
-                "editFileDescription"
-            )
-            .value
-            .trim();
-
-
-    try {
-
-        const { error } =
-            await sb
-                .from("repository_files")
-                .update({
-
-                    week:
-                        week,
-
-                    description:
-                        description
-
-                })
-                .eq(
-                    "id",
-                    id
-                )
-                .eq(
-                    "user_id",
-                    session.user.id
-                );
-
-
-        if (error) {
-            throw error;
-        }
-
-
-        if (msg) {
-
-            msg.textContent =
-                "Archivo actualizado correctamente.";
-
-        }
-
-
-        await loadAdminFiles();
-
-
-        setTimeout(
-            () => {
-
-                const modal =
-                    document.getElementById(
-                        "editFileModal"
-                    );
-
-
-                if (modal) {
-
-                    modal.classList.remove(
-                        "open"
-                    );
-
-                }
-
-            },
-            500
-        );
-
-
-    } catch (error) {
-
-        console.error(error);
-
-
-        if (msg) {
-
-            msg.textContent =
-                `Error: ${error.message}`;
-
-        }
-
-    }
-
-}
-
-
-// =====================================================
-// ELIMINAR ARCHIVO
-// =====================================================
-
-async function deleteFile(
-    id,
-    path
-) {
-
-    if (
-        !sb ||
-        !session
-    ) {
-        return;
-    }
-
-
-    const confirmed =
-        confirm(
-            "¿Seguro que deseas eliminar este archivo?"
-        );
-
-
-    if (!confirmed) {
-        return;
-    }
-
-
-    try {
-
-        const {
-            error: storageError
-        } =
-            await sb.storage
-                .from("repository-files")
-                .remove([path]);
-
-
-        if (storageError) {
-            throw storageError;
-        }
-
-
-        const {
-            error: databaseError
-        } =
-            await sb
-                .from("repository_files")
-                .delete()
-                .eq(
-                    "id",
-                    id
-                )
-                .eq(
-                    "user_id",
-                    session.user.id
-                );
-
-
-        if (databaseError) {
-            throw databaseError;
-        }
-
-
-        await loadAdminFiles();
-
-
-    } catch (error) {
-
-        console.error(error);
-
-
-        alert(
-            `No se pudo eliminar el archivo: ${error.message}`
-        );
-
-    }
-
-}
-
-
-// =====================================================
-// UTILIDADES
-// =====================================================
-
-function escapeHtml(
-    value = ""
-) {
-
-    return String(value)
-        .replace(
-            /[&<>"']/g,
-            (character) => ({
-
-                "&":
-                    "&amp;",
-
-                "<":
-                    "&lt;",
-
-                ">":
-                    "&gt;",
-
-                '"':
-                    "&quot;",
-
-                "'":
-                    "&#039;"
-
-            }[character])
-        );
-
-}
-
-
-function attr(
-    value = ""
-) {
-
-    return escapeHtml(
-        value
-    );
-
-}
-
-
-function jsstr(
-    value = ""
-) {
-
-    return String(value)
-        .replace(
-            /\\/g,
-            "\\\\"
-        )
-        .replace(
-            /'/g,
-            "\\'"
-        );
-
-}
-
-
-// =====================================================
-// PARTÍCULAS
-// =====================================================
-
-function createTechParticles() {
-
-    const container =
-        document.getElementById(
-            "techParticles"
-        );
-
-
-    if (!container) {
-        return;
-    }
-
-
-    container.innerHTML = "";
-
-
-    const total = 24;
-
-
-    for (
-        let i = 0;
-        i < total;
-        i++
-    ) {
-
-        const particle =
-            document.createElement(
-                "span"
-            );
-
-
-        particle.className =
-            "tech-particle";
-
-
-        particle.style.left =
-            Math.random() *
-            100 +
-            "%";
-
-
-        particle.style.top =
-            Math.random() *
-            100 +
-            "%";
-
-
-        particle.style.setProperty(
-            "--duration",
-            7 +
-            Math.random() *
-            8 +
-            "s"
-        );
-
-
-        particle.style.setProperty(
-            "--delay",
-            -Math.random() *
-            10 +
-            "s"
-        );
-
-
-        const size =
-            3 +
-            Math.random() *
-            5;
-
-
-        particle.style.width =
-            size +
-            "px";
-
-
-        particle.style.height =
-            size +
-            "px";
-
-
-        container.appendChild(
-            particle
-        );
-
-    }
-
-}
-
-
-// =====================================================
-// INICIAR TODO
-// =====================================================
-
-createTechParticles();
-
-init();
