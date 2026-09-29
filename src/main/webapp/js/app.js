@@ -3620,3 +3620,746 @@ async function openEditFile(id) {
     }
 
 }
+// =====================================================
+// GUARDAR CAMBIOS DEL ARCHIVO
+// =====================================================
+
+async function saveFileChanges(event) {
+
+    event.preventDefault();
+
+    if (!sb || !session) {
+        return;
+    }
+
+
+    const msg =
+        document.getElementById(
+            "editFileMsg"
+        );
+
+
+    const id =
+        document
+            .getElementById(
+                "editFileId"
+            )
+            ?.value;
+
+
+    const fileName =
+        document
+            .getElementById(
+                "editFileName"
+            )
+            ?.value
+            ?.trim();
+
+
+    const week =
+        Number(
+            document
+                .getElementById(
+                    "editFileWeek"
+                )
+                ?.value
+        );
+
+
+    const description =
+        document
+            .getElementById(
+                "editFileDescription"
+            )
+            ?.value
+            ?.trim() || "";
+
+
+    // -------------------------------------------------
+    // VALIDACIONES
+    // -------------------------------------------------
+
+    if (!id) {
+
+        if (msg) {
+            msg.textContent =
+                "No se encontró el archivo.";
+        }
+
+        return;
+    }
+
+
+    if (!fileName) {
+
+        if (msg) {
+            msg.textContent =
+                "Escribe un nombre para el archivo.";
+        }
+
+        return;
+    }
+
+
+    /*
+     * Evita que un archivo pueda terminar
+     * accidentalmente en una semana inexistente.
+     */
+    if (
+        !Number.isInteger(week) ||
+        week < 1 ||
+        week > weeks.length
+    ) {
+
+        if (msg) {
+
+            msg.textContent =
+                "Selecciona una semana válida del 1 al 16.";
+
+        }
+
+        return;
+    }
+
+
+    if (msg) {
+
+        msg.textContent =
+            "Guardando cambios...";
+
+    }
+
+
+    try {
+
+        /*
+         * Primero comprobamos que el archivo
+         * pertenezca al usuario actual.
+         */
+        const {
+            data: currentFile,
+            error: currentError
+        } =
+            await sb
+                .from(
+                    "repository_files"
+                )
+                .select("*")
+                .eq(
+                    "id",
+                    id
+                )
+                .eq(
+                    "user_id",
+                    session.user.id
+                )
+                .single();
+
+
+        if (currentError) {
+            throw currentError;
+        }
+
+
+        if (!currentFile) {
+
+            throw new Error(
+                "No se encontró el archivo."
+            );
+
+        }
+
+
+        const oldWeek =
+            Number(
+                currentFile.week
+            );
+
+
+        // -------------------------------------------------
+        // ACTUALIZAR BASE DE DATOS
+        // -------------------------------------------------
+
+        const {
+            error
+        } =
+            await sb
+                .from(
+                    "repository_files"
+                )
+                .update({
+
+                    file_name:
+                        fileName,
+
+                    week:
+                        week,
+
+                    description:
+                        description
+
+                })
+                .eq(
+                    "id",
+                    id
+                )
+                .eq(
+                    "user_id",
+                    session.user.id
+                );
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        /*
+         * IMPORTANTE:
+         *
+         * La semana utilizada por la página es la
+         * almacenada en la base de datos.
+         *
+         * Por eso, si cambias un archivo de Semana 03
+         * a Semana 05, inmediatamente dejará de aparecer
+         * en la 03 y aparecerá en la 05.
+         *
+         * No movemos el archivo físico dentro de Storage,
+         * porque hacerlo podría romper su URL pública.
+         */
+
+
+        if (msg) {
+
+            if (oldWeek !== week) {
+
+                msg.textContent =
+                    `Archivo movido correctamente de la Semana ${String(
+                        oldWeek
+                    ).padStart(
+                        2,
+                        "0"
+                    )} a la Semana ${String(
+                        week
+                    ).padStart(
+                        2,
+                        "0"
+                    )}.`;
+
+            } else {
+
+                msg.textContent =
+                    "Cambios guardados correctamente.";
+
+            }
+
+        }
+
+
+        // -------------------------------------------------
+        // ACTUALIZAR ADMINISTRACIÓN
+        // -------------------------------------------------
+
+        await loadAdminFiles();
+
+
+        /*
+         * Cerramos el modal después de un momento
+         * para que se pueda leer el mensaje.
+         */
+        setTimeout(
+            () => {
+
+                const modal =
+                    document.getElementById(
+                        "editFileModal"
+                    );
+
+
+                if (modal) {
+
+                    modal.classList.remove(
+                        "open"
+                    );
+
+                }
+
+            },
+            650
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Error al guardar cambios:",
+            error
+        );
+
+
+        if (msg) {
+
+            msg.textContent =
+                `Error: ${error.message}`;
+
+        }
+
+    }
+
+}
+
+
+// =====================================================
+// ELIMINAR ARCHIVO
+// =====================================================
+
+async function deleteFile(
+    id,
+    storagePath
+) {
+
+    if (!sb || !session) {
+        return;
+    }
+
+
+    const confirmed =
+        confirm(
+            "¿Seguro que deseas eliminar este archivo?"
+        );
+
+
+    if (!confirmed) {
+        return;
+    }
+
+
+    try {
+
+        /*
+         * Primero verificamos que el registro
+         * pertenezca al usuario actual.
+         */
+        const {
+            data,
+            error: findError
+        } =
+            await sb
+                .from(
+                    "repository_files"
+                )
+                .select("*")
+                .eq(
+                    "id",
+                    id
+                )
+                .eq(
+                    "user_id",
+                    session.user.id
+                )
+                .single();
+
+
+        if (findError) {
+            throw findError;
+        }
+
+
+        if (!data) {
+
+            throw new Error(
+                "No se encontró el archivo."
+            );
+
+        }
+
+
+        /*
+         * Utilizamos la ruta almacenada en la base
+         * de datos como fuente principal.
+         *
+         * Esto también permite eliminar correctamente
+         * archivos cuya semana fue modificada después.
+         */
+        const realStoragePath =
+            data.storage_path ||
+            storagePath;
+
+
+        // -------------------------------------------------
+        // ELIMINAR DE STORAGE
+        // -------------------------------------------------
+
+        if (realStoragePath) {
+
+            const {
+                error: storageError
+            } =
+                await sb.storage
+                    .from(
+                        "repository-files"
+                    )
+                    .remove(
+                        [
+                            realStoragePath
+                        ]
+                    );
+
+
+            if (storageError) {
+
+                console.warn(
+                    "No se pudo eliminar de Storage:",
+                    storageError
+                );
+
+            }
+
+        }
+
+
+        // -------------------------------------------------
+        // ELIMINAR REGISTRO
+        // -------------------------------------------------
+
+        const {
+            error: databaseError
+        } =
+            await sb
+                .from(
+                    "repository_files"
+                )
+                .delete()
+                .eq(
+                    "id",
+                    id
+                )
+                .eq(
+                    "user_id",
+                    session.user.id
+                );
+
+
+        if (databaseError) {
+            throw databaseError;
+        }
+
+
+        await loadAdminFiles();
+
+
+    } catch (error) {
+
+        console.error(
+            "Error al eliminar archivo:",
+            error
+        );
+
+
+        alert(
+            `No se pudo eliminar el archivo: ${error.message}`
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// ESCAPAR HTML
+// =====================================================
+
+function escapeHtml(value) {
+
+    return String(
+        value ?? ""
+    )
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+
+}
+
+
+// =====================================================
+// ESCAPAR ATRIBUTOS HTML
+// =====================================================
+
+function attr(value) {
+
+    return escapeHtml(
+        value
+    );
+
+}
+
+
+// =====================================================
+// ESCAPAR TEXTO PARA JAVASCRIPT INLINE
+// =====================================================
+
+function jsstr(value) {
+
+    return String(
+        value ?? ""
+    )
+        .replace(
+            /\\/g,
+            "\\\\"
+        )
+        .replace(
+            /'/g,
+            "\\'"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /\r/g,
+            ""
+        )
+        .replace(
+            /\n/g,
+            "\\n"
+        );
+
+}
+
+
+// =====================================================
+// INICIALES DEL PERFIL
+// =====================================================
+
+function getInitials(value) {
+
+    const text =
+        String(
+            value || "UPLA"
+        )
+            .trim();
+
+
+    if (!text) {
+        return "UP";
+    }
+
+
+    const parts =
+        text
+            .split(/\s+/)
+            .filter(Boolean);
+
+
+    if (parts.length === 1) {
+
+        return parts[0]
+            .slice(
+                0,
+                2
+            )
+            .toUpperCase();
+
+    }
+
+
+    return (
+        parts[0][0] +
+        parts[
+            parts.length - 1
+        ][0]
+    ).toUpperCase();
+
+}
+
+
+// =====================================================
+// PARTÍCULAS DECORATIVAS
+// =====================================================
+
+function createTechParticles() {
+
+    const container =
+        document.getElementById(
+            "techParticles"
+        );
+
+
+    if (!container) {
+        return;
+    }
+
+
+    /*
+     * Evita duplicar las partículas si init()
+     * llegara a ejecutarse nuevamente.
+     */
+    if (
+        container.children.length > 0
+    ) {
+
+        return;
+
+    }
+
+
+    const amount = 24;
+
+
+    for (
+        let i = 0;
+        i < amount;
+        i++
+    ) {
+
+        const particle =
+            document.createElement(
+                "span"
+            );
+
+
+        particle.className =
+            "tech-particle";
+
+
+        particle.style.left =
+            `${Math.random() * 100}%`;
+
+
+        particle.style.top =
+            `${Math.random() * 100}%`;
+
+
+        particle.style.animationDelay =
+            `${Math.random() * 8}s`;
+
+
+        particle.style.animationDuration =
+            `${8 + Math.random() * 10}s`;
+
+
+        container.appendChild(
+            particle
+        );
+
+    }
+
+}
+
+
+// =====================================================
+// TECLA ESCAPE
+// =====================================================
+
+document.addEventListener(
+    "keydown",
+    (event) => {
+
+        if (
+            event.key !== "Escape"
+        ) {
+            return;
+        }
+
+
+        if (authModal) {
+
+            authModal.classList.remove(
+                "open"
+            );
+
+        }
+
+
+        const editModal =
+            document.getElementById(
+                "editFileModal"
+            );
+
+
+        if (editModal) {
+
+            editModal.classList.remove(
+                "open"
+            );
+
+        }
+
+
+        if (nav) {
+
+            nav.classList.remove(
+                "open"
+            );
+
+        }
+
+    }
+);
+
+
+// =====================================================
+// ENLACES DE NAVEGACIÓN
+// =====================================================
+
+document.addEventListener(
+    "click",
+    (event) => {
+
+        const link =
+            event.target.closest(
+                "a[href^='#']"
+            );
+
+
+        if (
+            link &&
+            nav
+        ) {
+
+            nav.classList.remove(
+                "open"
+            );
+
+        }
+
+    }
+);
+
+
+// =====================================================
+// FUNCIONES DISPONIBLES PARA BOTONES INLINE
+// =====================================================
+
+window.openEditFile =
+    openEditFile;
+
+
+window.deleteFile =
+    deleteFile;
+
+
+// =====================================================
+// INICIO FINAL
+// =====================================================
+
+createTechParticles();
+
+init();
